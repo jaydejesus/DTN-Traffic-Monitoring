@@ -443,15 +443,6 @@ public class TrafficApp extends Application{
 			
 	}
 
-	//compute travel time of host on current path
-	public void computeTravelTime(DTNHost h, Coord from, Path p, double speed) {
-		
-	}
-	
-	public void computeTotalTravelTime(){
-		
-	}
-	
 	public double round(double value) {
 		return (double)Math.round(value * 100)/100;
 	}
