@@ -1,23 +1,31 @@
 /* 
- * Copyright 2010 Aalto University, ComNet
+ * Copyright 2010 Aalto Universit	y, ComNet
  * Released under GPLv3. See LICENSE.txt for details. 
  */
 
 package applications;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Random;
 
-
+import report.TrafficAppReporter;
 import core.Application;
 import core.Coord;
 import core.DTNHost;
 import core.Message;
+import core.Road;
 import core.Settings;
 import core.SimClock;
 import core.SimScenario;
 import core.World;
+
+import movement.Path;
+import movement.map.FastestPathFinder;
+import movement.map.MapNode;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * Simple ping application to demonstrate the application support. The 
@@ -32,59 +40,66 @@ import core.World;
  * @author teemuk
  */
 public class TrafficApplication extends Application{
-	/** Run in passive mode - don't generate pings but respond */
-	public static final String PING_PASSIVE = "passive";
 	/** Ping generation interval */
-	public static final String PING_INTERVAL = "interval";
+	public static final String TRAFFIC_INTERVAL = "interval";
 	/** Ping interval offset - avoids synchronization of ping sending */
-	public static final String PING_OFFSET = "offset";
+	public static final String TRAFFIC_OFFSET = "offset";
 	/** Destination address range - inclusive lower, exclusive upper */
-	public static final String PING_DEST_RANGE = "destinationRange";
+	public static final String TRAFFIC_DEST_RANGE = "destinationRange";
 	/** Seed for the app's random number generator */
-	public static final String PING_SEED = "seed";
+	public static final String TRAFFIC_SEED = "seed";
 	/** Size of the ping message */
-	public static final String PING_PING_SIZE = "pingSize";
-	/** Size of the pong message */
-	public static final String PING_PONG_SIZE = "pongSize";
+	public static final String TRAFFIC_MESSAGE_SIZE = "pingSize";
 	
 	/** Application ID */
-	public static final String APP_ID = "fi.tkk.netlab.PingApplication";
+	public static final String APP_ID = "fi.tkk.netlab.TrafficApp";
 	
+	public static final String mTYPE = "type";
+	public static final String mLOCATION = "location";
+	public static final String mSPEED = "speed";
+	public static final String mCURRENT_ROAD = "currentRoad";
+	public static final String mCURRENT_ROAD_STATUS = "currentRoadStatus";
+	public static final String mTIME_CREATED = "timeCreated";
+	public static final String mDISTANCE_TO_FRONTNODE = "distanceToFrontNode";
 	
-	/** Heading FINAL*/
-	public static final String TO_NORTH = "heading_to_north"; 
-	public static final String TO_SOUTH = "heading_to_south";
-	public static final String TO_EAST = "heading_to_east"; 
-	public static final String TO_WEST = "heading_to_west";
-	public static final String TO_NORTHEAST = "heading_to_northeast"; 
-	public static final String TO_SOUTHEAST = "heading_to_southeast";
-	public static final String TO_NORTHWEST = "heading_to_northwest"; 
-	public static final String TO_SOUTHWEST = "heading_to_southwest";
+	public static final String HEAVY_TRAFFIC = "HEAVY_TRAFFIC";
+	public static final String LIGHT_MODERATE_TRAFFIC = "LIGHT_TO_MODERATE_TRAFFIC";
 	
+	public static final String FREE_FLOW = "FREE_FLOW";
+	public static final String MEDIUM_FLOW = "MEDIUM_FLOW";
+	public static final String TRAFFIC_JAM = "MIGHT CAUSE HEAVY TRAFFIC!!!!";
+
+	public static final String LOW = "LOW_DENSITY";
+	public static final String MEDIUM = "MEDIUM_DENSITY";
+	public static final String HIGH = "HIGH_DENSITY";
+	
+	private static double FRESHNESS = 10.0;
+	private String currentRoadCondition = "";
+	private static final int VEHICLE_SIZE = 2;
 	// Private vars
-	private double	lastPing = 0;
-	private double	interval = 100;
-	private double locInterval = 1;
-	private double lastLocUpdate = 0;
-	private double ave_N;
-	private double ave_S;
-	private double ave_W;
-	private double ave_E;
-	private double ave_NW;
-	private double ave_NE;
-	private double ave_SW;
-	private double ave_SE;
-	private boolean passive = false;
+	private static final String TRAFFIC_PASSIVE = "passive";
+	
+	private double	lastAppUpdate = 0;
+	private double	appUpdateInterval = 5;
 	private int		seed = 0;
 	private int		destMin=0;
 	private int		destMax=1;
-	private int		pingSize=1;
-	private int		pongSize=1;
+	private int		appMsgSize=1;
 	private Random	rng;
 	private List<Message> msgs_list;
-	private Coord previousLocation;
-	private Coord currentLocation;
-	private String hostIsHeadingto;
+	private List<Message> neededMsgs;
+	private HashMap<DTNHost, Message> msgsHash;
+	private HashMap<String, List<Message>> groupedMsgs;
+	private HashMap<String, Double> evaluatedGroupedMsgs;
+	private double averageRoadSpeed;
+	private List<Message> roadMsgs;
+		
+	private List<DTNHost> sameLaneNodes;
+	private List<Message> frontNodesMsgs;
+	private FastestPathFinder alternativePathFinder;
+	private int roadCapacity;
+	private String roadDensity = "";
+	private boolean passive = false;
 	
 	/** 
 	 * Creates a new ping application with the given settings.
@@ -92,33 +107,30 @@ public class TrafficApplication extends Application{
 	 * @param s	Settings to use for initializing the application.
 	 */
 	public TrafficApplication(Settings s) {
-		if (s.contains(PING_PASSIVE)){
-			this.passive = s.getBoolean(PING_PASSIVE);
+		if (s.contains(TRAFFIC_PASSIVE)){
+			this.passive = s.getBoolean(TRAFFIC_PASSIVE);
 		}
-		if (s.contains(PING_INTERVAL)){
-			this.interval = s.getDouble(PING_INTERVAL);
+		if (s.contains(TRAFFIC_INTERVAL)){
+			this.appUpdateInterval = s.getDouble(TRAFFIC_INTERVAL);
 		}
-		if (s.contains(PING_OFFSET)){
-			this.lastPing = s.getDouble(PING_OFFSET);
+		if (s.contains(TRAFFIC_OFFSET)){
+			this.lastAppUpdate = s.getDouble(TRAFFIC_OFFSET);
 		}
-		if (s.contains(PING_SEED)){
-			this.seed = s.getInt(PING_SEED);
+		if (s.contains(TRAFFIC_SEED)){
+			this.seed = s.getInt(TRAFFIC_SEED);
 		}
-		if (s.contains(PING_PING_SIZE)) {
-			this.pingSize = s.getInt(PING_PING_SIZE);
+		if (s.contains(TRAFFIC_MESSAGE_SIZE)) {
+			this.appMsgSize = s.getInt(TRAFFIC_MESSAGE_SIZE);
 		}
-		if (s.contains(PING_PONG_SIZE)) {
-			this.pongSize = s.getInt(PING_PONG_SIZE);
-		}
-		if (s.contains(PING_DEST_RANGE)){
-			int[] destination = s.getCsvInts(PING_DEST_RANGE,2);
+		if (s.contains(TRAFFIC_DEST_RANGE)){
+			int[] destination = s.getCsvInts(TRAFFIC_DEST_RANGE,2);
 			this.destMin = destination[0];
 			this.destMax = destination[1];
 		}
 		
 		rng = new Random(this.seed);
 		super.setAppID(APP_ID);
-	}
+	}	
 	
 	/** 
 	 * Copy-constructor
@@ -127,18 +139,28 @@ public class TrafficApplication extends Application{
 	 */
 	public TrafficApplication(TrafficApplication a) {
 		super(a);
-		this.lastPing = a.getLastPing();
-		this.interval = a.getInterval();
 		this.passive = a.isPassive();
+		this.lastAppUpdate = a.getLastPing();
+		this.appUpdateInterval = a.getInterval();
 		this.destMax = a.getDestMax();
 		this.destMin = a.getDestMin();
 		this.seed = a.getSeed();
-		this.pongSize = a.getPongSize();
-		this.pingSize = a.getPingSize();
+		this.appMsgSize = a.getAppMsgSize();
 		this.rng = new Random(this.seed);
 		this.msgs_list = new ArrayList<Message>();
+		this.sameLaneNodes = new ArrayList<DTNHost>();
+		this.frontNodesMsgs = new ArrayList<Message>();
+		this.neededMsgs = new ArrayList<Message>();
+		this.msgsHash = new HashMap<DTNHost, Message>();
+		this.groupedMsgs = new HashMap<String, List<Message>>();
+		this.roadMsgs = new ArrayList<Message>();
+		this.evaluatedGroupedMsgs = new HashMap<String, Double>();
 	}
 	
+	private boolean isPassive() {
+		return this.passive;
+	}
+
 	/** 
 	 * Handles an incoming message. If the message is a ping message replies
 	 * with a pong message. Generates events for ping and pong messages.
@@ -148,51 +170,226 @@ public class TrafficApplication extends Application{
 	 */
 	@Override
 	public Message handle(Message msg, DTNHost host) {
-		String type = (String)msg.getProperty("type");
-		double ave_speed = 0;
+		String type = (String)msg.getProperty(mTYPE);
 
+		String basis = "";
 		try {
-			 if (type==null) return msg; // Not a ping/pong message
-				 
-				// Respond if we're the recipient
-				if (msg.getTo()==host && type.equalsIgnoreCase("ping")) {
-					if(msgs_list!=null) {
-						try {
-							for(Message mm : msgs_list) {
-								//add condition para maremove ghap kun it msg tikang mismo haim sarili pero ginforward la haim hin iba na node
-								if(msg.getFrom().equals(mm.getFrom()))// && mm.getTtl() <= 0)
-									msgs_list.remove(mm);
-								if(mm.getTtl() <= 0) {
-									msgs_list.remove(mm);
-								}
-//								if(mm.getFrom().equals(host))
-//									msgs_list.remove(mm);
-							}
-						}catch(Exception e) {
-							
+			 if (type==null) return msg;
+			 
+			 if(this.passive) {
+				 return msg;
+			 }
+			 
+			if (type.equalsIgnoreCase("traffic")) {
+					
+					if(!this.msgsHash.containsKey(msg.getFrom())) {
+						msgsHash.put(msg.getFrom(), msg);
+					}
+					else {
+						Message m = msgsHash.get(msg.getFrom());
+						if(msg.getCreationTime() > m.getCreationTime()) {
+							msgsHash.put(msg.getFrom(), msg);
 						}
 					}
-					if(msg.getTtl() > 0)
-						msgs_list.add(msg);
+
+					System.out.println(host + " Calling groupmsgsbyroad at time " + SimClock.getTime() + "==============================");
+					System.out.println(SimClock.getTime() + " Grouped msgs: " + this.groupedMsgs);
+					groupMsgsByRoad(msgsHash, host);
+					updateGroupedMsgs(this.groupedMsgs);
+					System.out.println("Updated hashmap: " + this.groupedMsgs);
+//					if(getTrafficCondition(this.neededMsgs, host) == TRAFFIC_JAM) {
+//						System.out.println(host + " MUST REROUTE!!!!!");
+//						System.out.println(host + " current path: " + host.getPath());
+//						
+//						getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
+//								host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.evaluatedGroupedMsgs);
+//					}
+//					if(this.neededMsgs.size() < 1)
+//						basis = " based on own speed ";
+//					else
+//						basis = " based on " + this.neededMsgs.size() + " same lane nodes ";
+//					
+//					super.sendEventToListeners("TrafficReport", host.getCurrentRoad(), basis, SimClock.getTime(), 
+//							getAverageRoadSpeed(this.neededMsgs, host), this.currentRoadCondition, null, host);
 					
-					getAverageSpeeds(msgs_list, host);
-					
-					System.out.println(SimClock.getIntTime() + " I am " + host + ". "+ host.getPath().getSpeed() + this.hostIsHeadingto + "Msg list contain/s " + msgs_list.size() + ": ");
-					for(int i = 0; i < msgs_list.size(); i++) {
-						Message m = msgs_list.get(i);
-						
-						System.out.println("A msg from " + m.getFrom() + "-ttl: "+ m.getTtl()+ ": " + m.getProperty("location") + ", " + m.getProperty("speed") + " " + m.getProperty("heading"));
-					}
-					System.out.println("North: " +this.ave_N + " South: " +this.ave_S + " West: " +this.ave_W + " East: " +this.ave_E);
-					System.out.println("NEast: " +this.ave_NE + " NWest: " +this.ave_NW + " SWest: " +this.ave_SW + " SEast: " +this.ave_SE);
-					System.out.println();
-					// Send event to listeners
-					super.sendEventToListeners("GotPing", null, host);
-					//super.sendEventToListeners("SentPong", null, host);
 				}				
-		 }catch(Exception e) {			 
+		 }catch(Exception e) {	
+			 e.printStackTrace();
 		 }		
 		return msg;
+	}
+
+	//groups messages according to its senders' current road, messages from different senders that are in same road are
+	//stored in a hash using the road name, which are common to them, as the key
+	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs, DTNHost host) {
+		System.out.println("Msgs received: " + msgs.values());
+		System.out.println("Size: " + msgs.size());
+		for(Message m : msgs.values()) {
+			this.roadMsgs.clear();
+			Road r = (Road) m.getProperty(mCURRENT_ROAD);
+			System.out.println(host + " received: " + m + " with roadname: " + r.getRoadName());
+			if(this.groupedMsgs.containsKey((String)r.getRoadName())) {
+				Iterator<Message> iterator = this.groupedMsgs.get(r.getRoadName()).iterator();
+//				List<Message> l = this.groupedMsgs.get(r.getRoadName());
+				List<Message> l;
+				
+				//fix here
+				while(iterator.hasNext()) {
+					Message msg = iterator.next();
+					if(m.getFrom().equals(msg.getFrom())) {
+						if(m.getCreationTime() == msg.getCreationTime()) {
+							iterator.remove();
+							System.out.println("IF : " + m + " had a duplicate. Duplicate has been ignored.");
+						}	
+						
+						else if(m.getCreationTime() > msg.getCreationTime()) {
+							iterator.remove();
+							System.out.println("Replaced " + msg + " with an updated " + m);
+						}
+						
+					}
+					this.groupedMsgs.get(r.getRoadName()).add(m);
+//					l.add(m);
+				}
+				l = this.groupedMsgs.get(r.getRoadName());
+				this.groupedMsgs.put((String) r.getRoadName(), l);
+				System.out.println("Updated list of hash with key : " + r.getRoadName());
+				System.out.println(this.groupedMsgs.get(r.getRoadName()));
+			}
+			else {
+				List<Message> l = new ArrayList<Message>();
+				l.add(m);
+				this.groupedMsgs.put((String) r.getRoadName(), l);
+				System.out.println("ELSE : added " + m + " to hash with key " + r.getRoadName() + " and value " + this.groupedMsgs.get(r.getRoadName()));
+				System.out.println("Updated list of hash with key: " + r.getRoadName());
+				System.out.println(this.groupedMsgs.get(r.getRoadName()));
+			}
+			System.out.println("Grouped msgs: " + this.groupedMsgs);								
+		}
+		
+		for(String key : this.groupedMsgs.keySet()) {
+			System.out.println(host + " key: " + key + " with size " + this.groupedMsgs.get(key).size());
+			for(Message m : this.groupedMsgs.get(key)) {
+				System.out.println("has value " + m + " " + ((Road) m.getProperty(mCURRENT_ROAD)).getRoadName());
+			} 
+		}
+		
+	}
+	
+	//returns a HashMap containing the evaluated results of the grouped messages
+	//computes the average speed on all known roads with respect to its freshness
+	//fresh messages (not greater than 10 seconds ago) are still considered, else it is discarded
+	public void updateGroupedMsgs(HashMap<String, List<Message>> evaluated) {
+		System.out.println("Updating messages per group......................");
+		for(String key : evaluated.keySet()) {
+			
+			Iterator<Message> iterator = evaluated.get(key).iterator();
+			while(iterator.hasNext()) {
+				Message m = iterator.next();
+				if((SimClock.getTime() - m.getCreationTime()) > FRESHNESS) {
+					System.out.println("Removed " + m + " from hash. " + (SimClock.getTime()-m.getCreationTime()) + "s ago since creation");
+					iterator.remove();
+//					System.out.println(evaluated);
+				}
+			}
+		}
+	}
+	
+	private double getAverageRoadSpeed(List<Message> msgs, DTNHost host) {
+		this.averageRoadSpeed = host.getCurrentSpeed();
+		int nrofhosts = 1;
+
+//		System.out.println(host + " is commputing ave spd of " + msgs.size() + " same lane nodes");
+		
+		for(Message m : msgs) {
+			double spd = (double) m.getProperty(mSPEED);
+//			System.out.println(host + " is adding " + m + " of " + m.getFrom() + ": spd=" + spd + " m.speed=" + (double) m.getProperty(mSPEED));
+			
+			this.averageRoadSpeed += spd;
+			nrofhosts++;
+		}
+//		System.out.println(host + " ave road spd: " + this.averageRoadSpeed/(double)nrofhosts + " nrofsamelanenodes: " + (nrofhosts > 1 ? nrofhosts : 0));
+		if(nrofhosts > 0)
+			this.averageRoadSpeed = this.averageRoadSpeed/(double)nrofhosts;
+		else
+			this.averageRoadSpeed = host.getCurrentSpeed();
+		
+		return this.averageRoadSpeed;
+	}
+	
+	private double getAverageFrontNodeDistance(List<Message> msgs, DTNHost host) {
+		double averageFrontDistance = 0;
+		double frontDistance;
+		for(Message m : msgs) {
+			frontDistance = (double) m.getProperty(mDISTANCE_TO_FRONTNODE);
+			averageFrontDistance = averageFrontDistance + frontDistance;
+		}
+//		System.out.println(host + " same lane average front distance " + msgs.size() + ": " + averageFrontDistance);
+		return (double)averageFrontDistance/msgs.size();
+	}
+
+	
+	public List<Message> filterFrontNodes(List<Message> msgs, DTNHost host){
+		this.frontNodesMsgs.clear();
+		for(Message m : msgs) {
+			DTNHost h = m.getFrom();
+			if(h.getLocation().distance(h.getCurrentDestination()) < host.getLocation().distance(host.getCurrentDestination())) {
+//				System.out.print(" " + h);
+				this.frontNodesMsgs.add(m);
+			}
+		}
+//		System.out.println();
+		return this.frontNodesMsgs;
+	}
+	
+	public int getRoadCapacity(Road r) {
+		this.roadCapacity =(int) (((Coord)r.getStartpoint()).distance((Coord)r.getEndpoint()) / VEHICLE_SIZE);
+		return this.roadCapacity;
+	}
+	
+	public String getRoadDensity(Road r, int nrOfVehicles) {
+
+		if(nrOfVehicles >= getRoadCapacity(r)/2)
+			this.roadDensity = HIGH;
+		else if(nrOfVehicles <= getRoadCapacity(r)/4)
+			this.roadDensity = LOW;
+		else
+			this.roadDensity = MEDIUM;
+		
+		return this.roadDensity;
+	}
+	
+	//changed msgs to consider for local average speed computation. only frontNodes will be considered 
+	public String getTrafficCondition(List<Message> msgs, DTNHost host) {
+		double ave_speed = getAverageRoadSpeed(filterFrontNodes(msgs, host), host);
+
+		if(ave_speed >= 8.0) {
+			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(HIGH))
+				this.currentRoadCondition = MEDIUM_FLOW;
+			else
+				this.currentRoadCondition = FREE_FLOW;
+		}
+		else if(ave_speed <= 1.0) {
+			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(HIGH)) {
+				this.currentRoadCondition = TRAFFIC_JAM;
+				System.out.println("Traffic on road " + host.getCurrentRoad().getRoadName());
+			}
+			else if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(MEDIUM))
+				this.currentRoadCondition = MEDIUM_FLOW;
+			else {
+				this.currentRoadCondition = FREE_FLOW;
+			}
+		}
+		else {
+			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(LOW))
+				this.currentRoadCondition = FREE_FLOW;
+			else
+				this.currentRoadCondition = MEDIUM_FLOW;
+		}
+				
+//		System.out.println(host + " road condition: " + this.currentRoadCondition + " ------------" + SimClock.getTime());
+//		System.out.println("===============================================================================================");
+		return this.currentRoadCondition;
 	}
 
 	/** 
@@ -215,260 +412,107 @@ public class TrafficApplication extends Application{
 		return new TrafficApplication(this);
 	}
 
-	/** 
-	 * Sends a ping packet if this is an active application instance.
-	 * 
-	 * @param host to which the application instance is attached
-	 */
 	@Override
 	public void update(DTNHost host) {
 		double curTime = SimClock.getTime();
-		this.currentLocation = host.getLocation().clone();
-		
-		if(this.previousLocation == null) {
-			this.previousLocation = currentLocation; 
-		}
-		if(curTime - this.lastLocUpdate >= this.locInterval) {
-			this.hostIsHeadingto = getHostHeading(host, this.currentLocation, this.previousLocation);
-			this.lastLocUpdate = curTime;
-			this.previousLocation = this.currentLocation;
-		}
-		
-		
+
 		try {
-			if (host.getConnections().get(0).isUp()) {
-				
-				if (curTime - this.lastPing >= this.interval) {
-					
-					// Time to send a new ping
-					String id = "ping";
-					String idd = SimClock.getIntTime() + "-" + host.getAddress() + "Host"+ host+" "+host.getLocation()+": " + host.getPath().getSpeed() + 
-							" " + this.hostIsHeadingto;
-					
-					Message m = new Message(host, randomHost(), id+idd, getPingSize());
-					m.addProperty("type", id);
-					m.addProperty("location", host.getLocation());
-					m.addProperty("speed", host.getPath().getSpeed());
-					m.addProperty("heading", this.hostIsHeadingto);
-					m.addProperty("myPathCoords", host.getPath().getCoords());
-					
-					m.setAppID(APP_ID);
-					host.createNewMessage(m);
-					
-					// Call listeners
-					super.sendEventToListeners("SentPing", null, host);
-					
-					this.lastPing = curTime;
-				}
+			if ((curTime - this.lastAppUpdate)% 2.0 == 0) {
+						
+				// Time to send a new ping
+				String id = host + "traffic-" + SimClock.getTime();
+						
+				Message m = new Message(host, null, id, getAppMsgSize());
+				m.addProperty(mTYPE, "traffic");
+				m.addProperty(mLOCATION, host.getLocation());
+				m.addProperty(mSPEED, host.getCurrentSpeed());
+				m.addProperty(mCURRENT_ROAD, host.getCurrentRoad());
+				m.addProperty(mCURRENT_ROAD_STATUS, host.getCurrentRoadStatus());
+				m.addProperty(mTIME_CREATED, SimClock.getTime()); //para pagcheck freshness
+				m.addProperty(mDISTANCE_TO_FRONTNODE, host.getLocation().distance(host.getFrontNode(host.getSameLaneNodes()).getLocation()));
+
+				m.setAppID(APP_ID);
+				host.createNewMessage(m);
+
+				super.sendEventToListeners("SentPing", null, host);
+				this.lastAppUpdate = curTime;
 			}
 		}catch(Exception e) {
-			//e.printStackTrace();
+
 		}
 	}
-	
-	/**
-	 * @return heading of nodes
-	 * 
-	 */
-	public String getHostHeading(DTNHost h, Coord current, Coord previous) {
-		String heading = "";
-		
-		if(((current.getX()-previous.getX()) == 0) && ((previous.getY()-current.getY()) > 0)) {
-			heading = TO_NORTH;
-		}else if(((current.getX()-previous.getX()) == 0) && ((previous.getY()-current.getY()) < 0)){
-			heading = TO_SOUTH;
-		}else if(((current.getX()-previous.getX()) < 0) && ((previous.getY()-current.getY()) == 0)) {
-			heading = TO_WEST; 
-		}else if(((current.getX()-previous.getX()) > 0) && ((previous.getY()-current.getY()) == 0)) {
-			heading = TO_EAST; 
-		}else if(((current.getX()-previous.getX()) < 0) && ((previous.getY()-current.getY()) > 0)) {
-			heading = TO_NORTHWEST; 
-		}else if(((current.getX()-previous.getX()) < 0) && ((previous.getY()-current.getY()) < 0)) {
-			heading = TO_SOUTHWEST; 
-		}else if(((current.getX()-previous.getX()) > 0) && ((previous.getY()-current.getY()) > 0)) {
-			heading = TO_NORTHEAST; 
-		}else if(((current.getX()-previous.getX()) > 0) && ((previous.getY()-current.getY()) < 0)) {
-			heading = TO_SOUTHEAST; 
-		}
-		
-		return heading;
+
+	private List<DTNHost> getSameLaneNodes() {
+		return this.sameLaneNodes;
 	}
 	
-	public void getAverageSpeeds(List<Message> m, DTNHost h) {
-		this.ave_N = 0;
-		this.ave_S = 0;
-		this.ave_W = 0;
-		this.ave_E = 0;
-		this.ave_NW = 0;
-		this.ave_NE = 0;
-		this.ave_SW = 0;
-		this.ave_SE = 0;
+	public void getAlternativePath(Coord start, Coord currentDestination, Coord finalDestination, List<Coord> path, DTNHost host, double slowSpeed, double pathSpeed) {
+		this.alternativePathFinder = new FastestPathFinder(host.getMovementModel().getOkMapNodeTypes2());
+		Path p = new Path(pathSpeed);
+		MapNode s = host.getMovementModel().getMap().getNodeByCoord(start);
+		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
+		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(finalDestination);
+		List<MapNode> altMapNodes = new ArrayList<MapNode>();
+		altMapNodes = this.alternativePathFinder.getAlternativePath(s, currentDest, dest, host.getLocation(), slowSpeed, pathSpeed, path);
+		System.out.println("Orig path " + host.getPathSpeed());
 		
-		int Nctr = 0;
-		int Sctr = 0;
-		int Wctr = 0;
-		int Ectr = 0;
-		int NEctr = 0;
-		int NWctr = 0;
-		int SEctr = 0;
-		int SWctr = 0;
-		
-		for(int i = 0; i < m.size(); i++) {
-			//System.out.println("Computing average of " + m.get(i));
-			//System.out.println(m.get(i).getProperty("heading"));
-//			if(isInSamePath(m.get(i), h)) {
-//				System.out.println(h + " & " + m.get(i).getFrom()+ " has same path");
-//				System.out.println(m.get(i).getFrom() + " speed and heading: " + m.get(i).getProperty("speed") + ", " + m.get(i).getProperty("heading"));
-				if(m.get(i).getProperty("heading").equals(TO_NORTH)) {
-//					if(Nctr == 0)
-//						this.ave_N = 0;
-					this.ave_N = this.ave_N + (double) m.get(i).getProperty("speed");
-					Nctr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_SOUTH)) {
-//					if(Sctr == 0)
-//						this.ave_S = 0;
-					this.ave_S = this.ave_S + (double) m.get(i).getProperty("speed");
-					Sctr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_WEST)) {
-//					if(Wctr == 0)
-//						this.ave_W = 0;
-					this.ave_W = this.ave_W + (double) m.get(i).getProperty("speed");
-					Wctr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_EAST)) {
-//					if(Ectr == 0)
-//						this.ave_E = 0;
-					this.ave_E = this.ave_E + (double) m.get(i).getProperty("speed");
-					Ectr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_NORTHEAST)) {
-//					if(NEctr == 0)
-//						this.ave_NE = 0;
-					this.ave_NE = this.ave_NE + (double) m.get(i).getProperty("speed");
-					NEctr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_NORTHWEST)) {
-//					if(NWctr == 0)
-//						this.ave_NW = 0;
-					this.ave_NW = this.ave_NW + (double) m.get(i).getProperty("speed");
-					NWctr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_SOUTHEAST)) {
-//					if(SEctr == 0)
-//						this.ave_SE = 0;
-					this.ave_SE = this.ave_SE + (double) m.get(i).getProperty("speed");
-					SEctr++;
-				}else if(m.get(i).getProperty("heading").equals(TO_SOUTHWEST)) {
-//					if(SWctr == 0)
-//						this.ave_SW = 0;
-					this.ave_SW = this.ave_SW + (double) m.get(i).getProperty("speed");
-					SWctr++;
-//				}
+		if(altMapNodes == null)
+			System.out.println("Path finder couldn't suggest faster routes. Sticking to current path.");
+		else {
+//			System.out.println("re: path= " + this.alternativePathFinder.getAlternativePath(s, dest, host.getLocation(), path, host.getCurrentSpeed()));
+//			System.out.println("Getting reroute path");
+			for(MapNode n : altMapNodes) {
+				p.addWaypoint(n.getLocation());
 			}
 
-			System.out.println("N average: " +this.ave_N + " , " + Nctr);
-			System.out.println("S average: " +this.ave_S + " , " + Sctr);
-			System.out.println("W average: " +this.ave_W + " , " + Wctr);
-			System.out.println("E average: " +this.ave_E + " , " + Ectr);
-			System.out.println("NW average: " +this.ave_NW + " , " + NWctr);
-			System.out.println("NE average: " +this.ave_NE + " , " + NEctr);
-			System.out.println("SW average: " +this.ave_SW + " , " + SWctr);
-			System.out.println("SE average: " +this.ave_SE + " , " + SEctr);
-			
-			
-			this.ave_N = this.ave_N/Nctr;
-			this.ave_S = this.ave_S/Sctr;
-			this.ave_W = this.ave_W/Wctr;
-			this.ave_E = this.ave_E/Ectr;
-			this.ave_NW = this.ave_NW/NWctr;
-			this.ave_NE = this.ave_NE/NEctr;
-			this.ave_SW = this.ave_SW/SWctr;
-			this.ave_SE = this.ave_SE/SEctr;
+//			System.out.println("in app: " + p);
+			System.out.println("called host reroute for " + host);
+			host.reroute(p);
+			System.out.println("done calling host reroute=================================");
 		}
-		//}
+			
 	}
-	
-	public boolean isInSamePath(Message m, DTNHost h) {
-		List <Coord> hostPath;
-		List <Coord> msgSenderPath;
-		int sameCtr = 0;
-		boolean isSame = false;
-		
 
-		hostPath = h.getPath().getCoords();
-		msgSenderPath = (List<Coord>) m.getProperty("myPathCoords");
+	//version 2 of finding reroute path (messages received from other hosts are now considered
+	private void getAlternativePathV2(Coord previousDestination, Coord currentDestination, Coord pathDestination,
+			List<Coord> subpath, DTNHost host, double currentSpeed, double pathSpeed,
+			HashMap<String, Double> evaluatedGroupedMsgs) {
 		
-		System.out.println(h + " Path: "+ hostPath);
-		System.out.println(m.getFrom() + " Path: " + msgSenderPath);
+		this.alternativePathFinder = new FastestPathFinder(host.getMovementModel().getOkMapNodeTypes2());
 		
-		System.out.println(h +  "" + h.getPath().getNextWaypoint());
-		System.out.println(m.getFrom() +  "" + m.getFrom().getPath().getNextWaypoint());
-		
-		for(int i = 0; i < hostPath.size(); i++) {
-			for(int j = 0; j < msgSenderPath.size(); j++) {
-				if(hostPath.get(i) == msgSenderPath.get(j)) {
-					i++;
-					sameCtr++;
-				}
-				else {
-					sameCtr = 0;
-				}
-			}
-		}
-		
-//		for(Coord c0 : hostPath) {
-//			for(Coord c1 : msgSenderPath) {
-//				if(c0.equals(c1)) {
-//					//isSame = true;
-//					sameCtr++;
-//					System.out.println(h + " and " + m.getFrom() + " equal " + sameCtr+ " : " + c0 + " | " + c1);
-//				}
-//			}
-//		}
-		if(sameCtr >= 8) {
-			isSame = true;
-			System.out.println(h + " and " + m.getFrom() + " same");
-		}
-
-		return isSame;
+		MapNode s = host.getMovementModel().getMap().getNodeByCoord(previousDestination);
+		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
+		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(pathDestination);
+		List<MapNode> altMapNodes = new ArrayList<MapNode>();
+		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, evaluatedGroupedMsgs);
 	}
 	
 	/**
 	 * @return the lastPing
 	 */
 	public double getLastPing() {
-		return lastPing;
+		return lastAppUpdate;
 	}
 
 	/**
 	 * @param lastPing the lastPing to set
 	 */
 	public void setLastPing(double lastPing) {
-		this.lastPing = lastPing;
+		this.lastAppUpdate = lastPing;
 	}
 
 	/**
 	 * @return the interval
 	 */
 	public double getInterval() {
-		return interval;
+		return appUpdateInterval;
 	}
 
 	/**
 	 * @param interval the interval to set
 	 */
 	public void setInterval(double interval) {
-		this.interval = interval;
-	}
-
-	/**
-	 * @return the passive
-	 */
-	public boolean isPassive() {
-		return passive;
-	}
-
-	/**
-	 * @param passive the passive to set
-	 */
-	public void setPassive(boolean passive) {
-		this.passive = passive;
+		this.appUpdateInterval = interval;
 	}
 
 	/**
@@ -514,31 +558,21 @@ public class TrafficApplication extends Application{
 	}
 
 	/**
-	 * @return the pongSize
-	 */
-	public int getPongSize() {
-		return pongSize;
-	}
-
-	/**
-	 * @param pongSize the pongSize to set
-	 */
-	public void setPongSize(int pongSize) {
-		this.pongSize = pongSize;
-	}
-
-	/**
 	 * @return the pingSize
 	 */
-	public int getPingSize() {
-		return pingSize;
+	public int getAppMsgSize() {
+		return this.appMsgSize;
 	}
 
 	/**
 	 * @param pingSize the pingSize to set
 	 */
-	public void setPingSize(int pingSize) {
-		this.pingSize = pingSize;
+	public void setPingSize(int size) {
+		this.appMsgSize = size;
+	}
+	
+	public List<Message> getMsgsList(){
+		return this.msgs_list;
 	}
 
 }

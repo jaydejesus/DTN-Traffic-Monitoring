@@ -15,6 +15,7 @@ import java.util.Queue;
 import java.util.Set;
 
 import core.Coord;
+import core.Road;
 
 /**
  * Implementation of the Dijkstra's shortest path algorithm.
@@ -92,6 +93,42 @@ public class FastestPathFinder {
 		}
 	}
 
+	private void relaxV2(MapNode node, MapNode prevDest, MapNode currDest, double pathSpeed, HashMap<String, Double> evaluatedGroupedMsgs) {
+		double nodeTravTime = travelTimes.get(node);
+		double speed;
+		for (MapNode n : node.getNeighbors()) {
+			String roadName = "[" + node.getLocation() + ", " + n.getLocation() + "]";
+//			Road r = new Road(node.getLocation(), n.getLocation(), roadName);
+			
+			if(evaluatedGroupedMsgs.containsKey(roadName)) {
+				speed = evaluatedGroupedMsgs.get(roadName);
+				
+			}
+			else {
+				speed = pathSpeed;
+			}
+			
+			if(node == prevDest && n == currDest) {
+				continue; //skip current traffic
+			}
+			if (visited.contains(n)) {
+				continue; // skip visited nodes
+			}
+
+			if (okMapNodes != null && !n.isType(okMapNodes)) {
+				continue; // skip nodes that are not OK
+			}
+
+			// n node's traveltime from path's source node
+			double nTravTime = nodeTravTime + getTravelTime(node, n, speed);
+
+			if (travelTimes.get(n) > nTravTime) { // stored distance > found dist?
+				prevNodes.put(n, node);
+				setTravelTime(n, nTravTime);
+			}
+		}
+	}
+	
 	/**
 	 * Sets the distance from source node to a node
 	 * @param n The node whose distance is set
@@ -186,7 +223,62 @@ public class FastestPathFinder {
 	//finding reroute path using the evaluated msgs as basis for travel speed 
 	public List<MapNode> getAlternativePathV2(MapNode s, MapNode currentDest, MapNode dest, Coord location,
 			double currentSpeed, double pathSpeed, List<Coord> subpath, HashMap<String, Double> evaluatedGroupedMsgs) {
-		return null;
+		List<MapNode> path = new LinkedList<MapNode>();
+
+		double rerouteTravTime = location.distance(s.getLocation())/pathSpeed;
+		double currentPathTravTime = location.distance(currentDest.getLocation())/currentSpeed;
+		
+		if (s.compareTo(dest) == 0) { // source and destination are the same
+			path.add(s); // return a list containing only source node
+			return path;
+		}
+
+		initWith(s);
+		MapNode node = null;
+
+		// always take the node with shortest distance
+		while ((node = unvisited.poll()) != null) {
+			if (node == dest) {
+				break; // we found the destination -> no need to search further
+			}
+
+			visited.add(node); // mark the node as visited
+			relax(node, s, currentDest, pathSpeed); // add/update neighbor nodes' travelTimes
+		}
+
+		// now we either have the path or such path wasn't available
+		if (node == dest) { // found a path
+			path.add(0,dest);
+			MapNode prev = prevNodes.get(dest);
+			while (prev != s) {
+				path.add(0, prev);	// always put previous node to beginning
+				prev = prevNodes.get(prev);
+			}
+
+			path.add(0, s); // finally put the source node to first node
+		}
+		System.out.println("reroute path: " + path);
+		
+//		System.out.println("reroute path traveltime");
+		for(int i = 0; i < path.size()-1; i++) {
+			Coord c1 = path.get(i).getLocation();
+			Coord c2 = path.get(i+1).getLocation();
+//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/pathSpeed));
+			rerouteTravTime = rerouteTravTime + (c1.distance(c2)/pathSpeed);
+		}
+		System.out.println("reroute path total travel time : " + rerouteTravTime);
+//		System.out.println("current paaaath traveltimes");
+		for(int i = 0; i < subpath.size()-1; i++) {
+			Coord c1 = subpath.get(i);
+			Coord c2 = subpath.get(i+1);
+//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/pathSpeed));
+			currentPathTravTime = currentPathTravTime + (c1.distance(c2)/pathSpeed);
+		}
+		System.out.println("current path total travel time : " + currentPathTravTime);
+		if(rerouteTravTime > currentPathTravTime)
+			return null;
+		return path;
+
 	}
 	
 	/**

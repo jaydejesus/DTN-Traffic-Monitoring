@@ -194,11 +194,11 @@ public class TrafficApp extends Application{
 					}
 
 					classifyMsgs(msgsHash, host);
-					
+					groupMsgsByRoad(msgsHash, host);
 					if(getTrafficCondition(this.neededMsgs, host) == TRAFFIC_JAM) {
 						System.out.println(host + " MUST REROUTE!!!!!");
 						System.out.println(host + " current path: " + host.getPath());
-						groupMsgsByRoad(msgsHash);
+						
 						getAlternativePath(host.getPreviousDestination(), host.getCurrentDestination(), 
 								host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed());
 						getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
@@ -221,7 +221,7 @@ public class TrafficApp extends Application{
 
 	//groups messages according to its senders' current road, messages from different senders that are in same road are
 	//stored in a hash using the road name, which are common to them, as the key
-	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs) {
+	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs, DTNHost host) {
 		this.roadMsgs.clear();
 		for(Message m : msgs.values()) {
 			
@@ -238,9 +238,9 @@ public class TrafficApp extends Application{
 				this.groupedMsgs.put((String) r.getRoadName(), this.roadMsgs);
 			}
 		}
-//		for(String key : this.groupedMsgs.keySet()) {
-//			System.out.println(host + " road: " + key + " " + this.groupedMsgs.get(key));
-//		}
+		for(String key : this.groupedMsgs.keySet()) {
+			System.out.println(host + " road: " + key + " " + this.groupedMsgs.get(key));
+		}
 		
 	}
 	
