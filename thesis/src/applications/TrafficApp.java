@@ -88,7 +88,10 @@ public class TrafficApp extends Application{
 	private List<Message> msgs_list;
 	private List<Message> neededMsgs;
 	private HashMap<DTNHost, Message> msgsHash;
+	private HashMap<String, List<Message>> groupedMsgs;
+	private HashMap<String, Double> evaluatedGroupedMsgs;
 	private double averageRoadSpeed;
+	private List<Message> roadMsgs;
 		
 	private List<DTNHost> sameLaneNodes;
 	private List<Message> frontNodesMsgs;
@@ -148,6 +151,9 @@ public class TrafficApp extends Application{
 		this.frontNodesMsgs = new ArrayList<Message>();
 		this.neededMsgs = new ArrayList<Message>();
 		this.msgsHash = new HashMap<DTNHost, Message>();
+		this.groupedMsgs = new HashMap<String, List<Message>>();
+		this.roadMsgs = new ArrayList<Message>();
+		this.evaluatedGroupedMsgs = new HashMap<String, Double>();
 	}
 	
 	private boolean isPassive() {
@@ -188,11 +194,15 @@ public class TrafficApp extends Application{
 					}
 
 					classifyMsgs(msgsHash, host);
+					
 					if(getTrafficCondition(this.neededMsgs, host) == TRAFFIC_JAM) {
 						System.out.println(host + " MUST REROUTE!!!!!");
 						System.out.println(host + " current path: " + host.getPath());
+						groupMsgsByRoad(msgsHash);
 						getAlternativePath(host.getPreviousDestination(), host.getCurrentDestination(), 
 								host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed());
+						getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
+								host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.evaluatedGroupedMsgs);
 					}
 					if(this.neededMsgs.size() < 1)
 						basis = " based on own speed ";
@@ -208,6 +218,48 @@ public class TrafficApp extends Application{
 		return msg;
 	}
 
+
+	//groups messages according to its senders' current road, messages from different senders that are in same road are
+	//stored in a hash using the road name, which are common to them, as the key
+	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs) {
+		this.roadMsgs.clear();
+		for(Message m : msgs.values()) {
+			
+			Road r = (Road) m.getProperty(mCURRENT_ROAD);
+			
+			if(this.groupedMsgs.containsKey(r.getRoadName())) {
+				this.roadMsgs = this.groupedMsgs.get(r.getRoadName());
+				this.roadMsgs.add(m);
+				System.out.println("added " + m + " to list. " + this.roadMsgs);
+				this.groupedMsgs.put((String) r.getRoadName(), this.roadMsgs);
+			}
+			else {
+				this.roadMsgs.add(m);
+				this.groupedMsgs.put((String) r.getRoadName(), this.roadMsgs);
+			}
+		}
+//		for(String key : this.groupedMsgs.keySet()) {
+//			System.out.println(host + " road: " + key + " " + this.groupedMsgs.get(key));
+//		}
+		
+	}
+	
+	//returns a HashMap containing the evaluated results of the grouped messages
+	//computes the average speed on all known roads with respect to its freshness
+	//fresh messages (not greater than 10 seconds ago) are still considered, else it is discarded
+	public HashMap<String, Double> evaluateGroupedMsgs(HashMap<String, List<Message>> evaluated) {
+		for(String key : evaluated.keySet()) {
+			double average = 0;
+			for(Message m : evaluated.get(key)) {
+				if((SimClock.getTime() - m.getCreationTime()) > FRESHNESS)
+					evaluated.get(key).remove(m);
+				else
+					average = average + (double)m.getProperty(mSPEED);
+			}
+		}
+		return this.evaluatedGroupedMsgs;
+	}
+	
 	public void classifyMsgs(HashMap<DTNHost, Message> msgs, DTNHost host) {
 		this.neededMsgs.clear();
 
@@ -443,13 +495,18 @@ public class TrafficApp extends Application{
 			
 	}
 
-	//compute travel time of host on current path
-	public void computeTravelTime(DTNHost h, Coord from, Path p, double speed) {
+	//version 2 of finding reroute path (messages received from other hosts are now considered
+	private void getAlternativePathV2(Coord previousDestination, Coord currentDestination, Coord pathDestination,
+			List<Coord> subpath, DTNHost host, double currentSpeed, double pathSpeed,
+			HashMap<String, Double> evaluatedGroupedMsgs) {
 		
-	}
-	
-	public void computeTotalTravelTime(){
+		this.alternativePathFinder = new FastestPathFinder(host.getMovementModel().getOkMapNodeTypes2());
 		
+		MapNode s = host.getMovementModel().getMap().getNodeByCoord(previousDestination);
+		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
+		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(pathDestination);
+		List<MapNode> altMapNodes = new ArrayList<MapNode>();
+		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, evaluatedGroupedMsgs);
 	}
 	
 	public double round(double value) {

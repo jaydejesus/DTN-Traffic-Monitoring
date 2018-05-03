@@ -162,7 +162,7 @@ public class FastestPathFinder {
 		}
 		System.out.println("reroute path: " + path);
 		
-		System.out.println("reroute paaaath traveltimes");
+//		System.out.println("reroute path traveltime");
 		for(int i = 0; i < path.size()-1; i++) {
 			Coord c1 = path.get(i).getLocation();
 			Coord c2 = path.get(i+1).getLocation();
@@ -170,7 +170,7 @@ public class FastestPathFinder {
 			rerouteTravTime = rerouteTravTime + (c1.distance(c2)/pathSpeed);
 		}
 		System.out.println("reroute path total travel time : " + rerouteTravTime);
-		System.out.println("current paaaath traveltimes");
+//		System.out.println("current paaaath traveltimes");
 		for(int i = 0; i < contPathCoords.size()-1; i++) {
 			Coord c1 = contPathCoords.get(i);
 			Coord c2 = contPathCoords.get(i+1);
@@ -183,7 +183,12 @@ public class FastestPathFinder {
 		return path;
 	}
 	
-
+	//finding reroute path using the evaluated msgs as basis for travel speed 
+	public List<MapNode> getAlternativePathV2(MapNode s, MapNode currentDest, MapNode dest, Coord location,
+			double currentSpeed, double pathSpeed, List<Coord> subpath, HashMap<String, Double> evaluatedGroupedMsgs) {
+		return null;
+	}
+	
 	/**
 	 * Comparator that compares two map nodes by their distance from
 	 * the source node.
