@@ -19,25 +19,25 @@ trafficAppF.passive = false
 # Set Traffic Application app for all nodes
 Group.nrofApplications = 1
 Group1.speed = 8.0, 11.0
-Group1.nrofHosts = 20
+Group1.nrofHosts = 50
 Group1.groupID = n
 Group1.pois = 1, 1.0
 Group1.application1 = trafficAppF
 
 Group2.speed = 0.3, 0.5
-Group2.nrofHosts = 10
+Group2.nrofHosts = 25
 Group2.groupID = s
 Group2.pois = 1, 1.0
 Group2.application1 = trafficAppT
 
 Group3.speed = 8.0, 11.0
-Group3.nrofHosts = 20
+Group3.nrofHosts = 50
 Group3.groupID = m
 Group3.pois = 2, 1.0
 Group3.application1 = trafficAppF
 
 Group4.speed = 0.3, 0.5
-Group4.nrofHosts = 10
+Group4.nrofHosts = 25
 Group4.groupID = s
 Group4.pois = 2, 1.0
 Group4.application1 = trafficAppF

@@ -431,9 +431,6 @@ public class DTNHost implements Comparable<DTNHost> {
 		double dx, dy;
 		DTNHost frontNode;
 
-		if(this.toString().startsWith("n"))
-//			System.out.println("time: " + SimClock.getTime() + " traveltime: " + this.travelTime + " prevtriptravtime: " + this.prevTravelTime + " @ " + this.location + " path: " + this.path);
-		
 		if (!isMovementActive() || SimClock.getTime() < this.nextTimeToMove) {
 			return;
 		}
@@ -489,6 +486,8 @@ public class DTNHost implements Comparable<DTNHost> {
 		dy = (possibleMovement/distance) * (this.destination.getY() -
 				this.location.getY());
 		this.location.translate(dx, dy);
+		if(!this.getGroupId().equals("s"))
+			System.out.println(this + " @" + SimClock.getTime() + ": in move(). Current path is " + getPath());
 	}
 
 	/**

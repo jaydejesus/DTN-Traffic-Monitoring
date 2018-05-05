@@ -45,6 +45,8 @@ wifiDirectInterface.transmitRange = 200
 
 PointsOfInterest.poiFile1 = data/2pointsReverse.wkt
 PointsOfInterest.poiFile2 = data/2points.wkt
+#PointsOfInterest.poiFile1 = data/poi1.wkt
+#PointsOfInterest.poiFile2 = data/poi2.wkt
 
 # Common settings for all groups
 Group.movementModel = ShortestPathMapBasedMovement
@@ -148,5 +150,5 @@ Report.report1 = TrafficAppReporter
 
 ## Optimization settings -- these affect the speed of the simulation
 ## see World class for details.
-Optimization.cellSizeMult = 5
-Optimization.randomizeUpdateOrder = true
+Optimization.cellSizeMult = 20
+Optimization.randomizeUpdateOrder = false

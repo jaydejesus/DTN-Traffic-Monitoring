@@ -16,6 +16,7 @@ import java.util.Set;
 
 import core.Coord;
 import core.Road;
+import core.RoadProperties;
 
 /**
  * Implementation of the Dijkstra's shortest path algorithm.
@@ -93,19 +94,22 @@ public class FastestPathFinder {
 		}
 	}
 
-	private void relaxV2(MapNode node, MapNode prevDest, MapNode currDest, double pathSpeed, HashMap<String, Double> evaluatedGroupedMsgs) {
+	private void relaxV2(MapNode node, MapNode prevDest, MapNode currDest, double pathSpeed, HashMap<String, RoadProperties> roadProperties) {
 		double nodeTravTime = travelTimes.get(node);
-		double speed;
+		double speed = 0;
 		for (MapNode n : node.getNeighbors()) {
 			String roadName = "[" + node.getLocation() + ", " + n.getLocation() + "]";
 //			Road r = new Road(node.getLocation(), n.getLocation(), roadName);
 			
-			if(evaluatedGroupedMsgs.containsKey(roadName)) {
-				speed = evaluatedGroupedMsgs.get(roadName);
-				
+			if(roadProperties.containsKey(roadName)) {
+				speed = roadProperties.get(roadName).getAverageSpeedOfRoad();
+				if(speed < 0)
+					speed = pathSpeed;
+//				System.out.println(roadName + " of the hash checked in FPF. ave_speed is " + speed);
 			}
-			else {
+			if(!roadProperties.containsKey(roadName)) {
 				speed = pathSpeed;
+//				System.out.println(roadName + " not found in hash. Using pathSpeed" + speed );
 			}
 			
 			if(node == prevDest && n == currDest) {
@@ -222,9 +226,10 @@ public class FastestPathFinder {
 	
 	//finding reroute path using the evaluated msgs as basis for travel speed 
 	public List<MapNode> getAlternativePathV2(MapNode s, MapNode currentDest, MapNode dest, Coord location,
-			double currentSpeed, double pathSpeed, List<Coord> subpath, HashMap<String, Double> evaluatedGroupedMsgs) {
+			double currentSpeed, double pathSpeed, List<Coord> subpath, HashMap<String, RoadProperties> roadProperties) {
 		List<MapNode> path = new LinkedList<MapNode>();
 
+		System.out.println("here in altpath");
 		double rerouteTravTime = location.distance(s.getLocation())/pathSpeed;
 		double currentPathTravTime = location.distance(currentDest.getLocation())/currentSpeed;
 		
@@ -243,7 +248,7 @@ public class FastestPathFinder {
 			}
 
 			visited.add(node); // mark the node as visited
-			relax(node, s, currentDest, pathSpeed); // add/update neighbor nodes' travelTimes
+			relaxV2(node, s, currentDest, pathSpeed, roadProperties); // add/update neighbor nodes' travelTimes
 		}
 
 		// now we either have the path or such path wasn't available
@@ -263,20 +268,35 @@ public class FastestPathFinder {
 		for(int i = 0; i < path.size()-1; i++) {
 			Coord c1 = path.get(i).getLocation();
 			Coord c2 = path.get(i+1).getLocation();
-//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/pathSpeed));
-			rerouteTravTime = rerouteTravTime + (c1.distance(c2)/pathSpeed);
+			double speed;
+			String r = "["+ c1 + ", " + c2 + "]";
+			if(roadProperties.containsKey(r) && roadProperties.get(r).getAverageSpeedOfRoad() > 0)
+				speed = roadProperties.get(r).getAverageSpeedOfRoad();
+			else
+				speed = pathSpeed;
+//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/speed));
+			rerouteTravTime = rerouteTravTime + (c1.distance(c2)/speed);
 		}
 		System.out.println("reroute path total travel time : " + rerouteTravTime);
 //		System.out.println("current paaaath traveltimes");
 		for(int i = 0; i < subpath.size()-1; i++) {
 			Coord c1 = subpath.get(i);
 			Coord c2 = subpath.get(i+1);
-//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/pathSpeed));
-			currentPathTravTime = currentPathTravTime + (c1.distance(c2)/pathSpeed);
+			double speed;
+			String r = "["+ c1 + ", " + c2 + "]";
+			if(roadProperties.containsKey(r) && roadProperties.get(r).getAverageSpeedOfRoad() > 0)
+				speed = roadProperties.get(r).getAverageSpeedOfRoad();
+			else
+				speed = pathSpeed;
+//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/speed));
+			currentPathTravTime = currentPathTravTime + (c1.distance(c2)/speed);
 		}
 		System.out.println("current path total travel time : " + currentPathTravTime);
-		if(rerouteTravTime > currentPathTravTime)
-			return null;
+		if(rerouteTravTime > currentPathTravTime) {
+//			System.out.println("No reroute suggestions. returning null");
+			path = null;
+		}
+		System.out.println("Returning path to app: " + path);
 		return path;
 
 	}

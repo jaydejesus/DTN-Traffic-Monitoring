@@ -14,6 +14,7 @@ import core.Coord;
 import core.DTNHost;
 import core.Message;
 import core.Road;
+import core.RoadProperties;
 import core.Settings;
 import core.SimClock;
 import core.SimScenario;
@@ -90,7 +91,7 @@ public class TrafficApplication extends Application{
 	private List<Message> neededMsgs;
 	private HashMap<DTNHost, Message> msgsHash;
 	private HashMap<String, List<Message>> groupedMsgs;
-	private HashMap<String, Double> evaluatedGroupedMsgs;
+	private HashMap<String, RoadProperties> roadProperties;
 	private double averageRoadSpeed;
 	private List<Message> roadMsgs;
 		
@@ -154,7 +155,7 @@ public class TrafficApplication extends Application{
 		this.msgsHash = new HashMap<DTNHost, Message>();
 		this.groupedMsgs = new HashMap<String, List<Message>>();
 		this.roadMsgs = new ArrayList<Message>();
-		this.evaluatedGroupedMsgs = new HashMap<String, Double>();
+		this.roadProperties = new HashMap<String, RoadProperties>();
 	}
 	
 	private boolean isPassive() {
@@ -192,18 +193,24 @@ public class TrafficApplication extends Application{
 						}
 					}
 
-					System.out.println(host + " Calling groupmsgsbyroad at time " + SimClock.getTime() + "==============================");
-					System.out.println(SimClock.getTime() + " Grouped msgs: " + this.groupedMsgs);
+//					System.out.println(host + " Grouping msgs at time " + SimClock.getTime() + "==============================");
+//					System.out.println(SimClock.getTime() + " Grouped msgs: " + this.groupedMsgs);
 					groupMsgsByRoad(msgsHash, host);
+//					System.out.println(host + " Updating msgs at time " + SimClock.getTime() + "==============================");
 					updateGroupedMsgs(this.groupedMsgs);
-					System.out.println("Updated hashmap: " + this.groupedMsgs);
-//					if(getTrafficCondition(this.neededMsgs, host) == TRAFFIC_JAM) {
+//					System.out.println(host + " Computing average speeds based on msgs at time " + SimClock.getTime() + "==============================");
+					computeAverageSpeedPerRoad(this.groupedMsgs, host);
+//					System.out.println("Updated hashmap: " + this.groupedMsgs);
+//					System.out.println("Updated hashmap size: " + this.groupedMsgs.entrySet().size());
+					if(getRoadTrafficConditions(this.roadProperties, host) == TRAFFIC_JAM) {
 //						System.out.println(host + " MUST REROUTE!!!!!");
-//						System.out.println(host + " current path: " + host.getPath());
-//						
-//						getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
-//								host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.evaluatedGroupedMsgs);
-//					}
+//						System.out.println(host + " current path upon knowing traffic: " + host.getPath().getCoords());
+						System.out.println(host + " current location: " + host.getLocation() + " at " + host.getCurrentRoad().getRoadName() + " distance to currDest: " + 
+								host.getLocation().distance(host.getCurrentDestination()) + " speed: " + host.getCurrentSpeed());
+						
+						getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
+								host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
+					}
 //					if(this.neededMsgs.size() < 1)
 //						basis = " based on own speed ";
 //					else
@@ -222,55 +229,46 @@ public class TrafficApplication extends Application{
 	//groups messages according to its senders' current road, messages from different senders that are in same road are
 	//stored in a hash using the road name, which are common to them, as the key
 	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs, DTNHost host) {
-		System.out.println("Msgs received: " + msgs.values());
-		System.out.println("Size: " + msgs.size());
+//		System.out.println("Msgs received: " + msgs.size());
 		for(Message m : msgs.values()) {
 			this.roadMsgs.clear();
 			Road r = (Road) m.getProperty(mCURRENT_ROAD);
-			System.out.println(host + " received: " + m + " with roadname: " + r.getRoadName());
+//			System.out.println(host + " received: " + m + " with roadname: " + r.getRoadName());
+			
 			if(this.groupedMsgs.containsKey((String)r.getRoadName())) {
-				Iterator<Message> iterator = this.groupedMsgs.get(r.getRoadName()).iterator();
-//				List<Message> l = this.groupedMsgs.get(r.getRoadName());
-				List<Message> l;
-				
-				//fix here
+				List<Message> tempList = this.groupedMsgs.get(r.getRoadName());
+				Iterator<Message> iterator = tempList.iterator();
+
 				while(iterator.hasNext()) {
 					Message msg = iterator.next();
 					if(m.getFrom().equals(msg.getFrom())) {
 						if(m.getCreationTime() == msg.getCreationTime()) {
 							iterator.remove();
-							System.out.println("IF : " + m + " had a duplicate. Duplicate has been ignored.");
+//							System.out.println("IF : " + m + " had a duplicate. Duplicate has been ignored.");
 						}	
 						
 						else if(m.getCreationTime() > msg.getCreationTime()) {
 							iterator.remove();
-							System.out.println("Replaced " + msg + " with an updated " + m);
+//							System.out.println("Replaced " + msg + " with an updated " + m);
 						}
 						
 					}
-					this.groupedMsgs.get(r.getRoadName()).add(m);
-//					l.add(m);
 				}
-				l = this.groupedMsgs.get(r.getRoadName());
-				this.groupedMsgs.put((String) r.getRoadName(), l);
-				System.out.println("Updated list of hash with key : " + r.getRoadName());
-				System.out.println(this.groupedMsgs.get(r.getRoadName()));
+				tempList.add(m);
+				this.groupedMsgs.put((String) r.getRoadName(), tempList);
 			}
 			else {
 				List<Message> l = new ArrayList<Message>();
 				l.add(m);
 				this.groupedMsgs.put((String) r.getRoadName(), l);
-				System.out.println("ELSE : added " + m + " to hash with key " + r.getRoadName() + " and value " + this.groupedMsgs.get(r.getRoadName()));
-				System.out.println("Updated list of hash with key: " + r.getRoadName());
-				System.out.println(this.groupedMsgs.get(r.getRoadName()));
+//				System.out.println("ELSE : added " + m + " to hash with key " + r.getRoadName() + " and value " + this.groupedMsgs.get(r.getRoadName()));
 			}
-			System.out.println("Grouped msgs: " + this.groupedMsgs);								
 		}
 		
 		for(String key : this.groupedMsgs.keySet()) {
-			System.out.println(host + " key: " + key + " with size " + this.groupedMsgs.get(key).size());
+//			System.out.println(host + " key: " + key + " with size " + this.groupedMsgs.get(key).size());
 			for(Message m : this.groupedMsgs.get(key)) {
-				System.out.println("has value " + m + " " + ((Road) m.getProperty(mCURRENT_ROAD)).getRoadName());
+//				System.out.println("has value " + m + " " + ((Road) m.getProperty(mCURRENT_ROAD)).getRoadName());
 			} 
 		}
 		
@@ -279,20 +277,117 @@ public class TrafficApplication extends Application{
 	//returns a HashMap containing the evaluated results of the grouped messages
 	//computes the average speed on all known roads with respect to its freshness
 	//fresh messages (not greater than 10 seconds ago) are still considered, else it is discarded
-	public void updateGroupedMsgs(HashMap<String, List<Message>> evaluated) {
-		System.out.println("Updating messages per group......................");
-		for(String key : evaluated.keySet()) {
-			
-			Iterator<Message> iterator = evaluated.get(key).iterator();
+	public void updateGroupedMsgs(HashMap<String, List<Message>> hash) {
+//		System.out.println("Updating messages per group......................");
+		for(String key : hash.keySet()) {
+			Iterator<Message> iterator = hash.get(key).iterator();
 			while(iterator.hasNext()) {
 				Message m = iterator.next();
 				if((SimClock.getTime() - m.getCreationTime()) > FRESHNESS) {
-					System.out.println("Removed " + m + " from hash. " + (SimClock.getTime()-m.getCreationTime()) + "s ago since creation");
+//					System.out.println("Removed " + m + " from hash. " + (SimClock.getTime()-m.getCreationTime()) + "s ago since creation");
 					iterator.remove();
-//					System.out.println(evaluated);
 				}
 			}
 		}
+	}
+	
+	public void computeAverageSpeedPerRoad(HashMap<String, List<Message>> hash, DTNHost host) {
+		double NaN = -1.0;
+		for(String key : hash.keySet()) {
+			RoadProperties rps;
+//			System.out.println("Road " + key + ": ");
+			if(hash.get(key).isEmpty()) {
+				rps = new RoadProperties(key, NaN, 0);
+				this.roadProperties.put(key, rps);
+//				System.out.println(this.roadProperties.get(key).getRoadName() + ": "  +this.roadProperties.get(key).getAverageSpeedOfRoad() 
+//						+ " , " + this.roadProperties.get(key).getRoadDensity());
+			}
+//			if(key.equals(host.getCurrentRoad().getRoadName())) {
+//				Iterator<Message> iterator = hash.get(key).iterator();
+//				double average = 0;
+//				int ctr = 0;
+//				while(iterator.hasNext()) {
+//					Message m = iterator.next();
+//					Coord c = (Coord) m.getProperty(mLOCATION);
+//					//f
+//					if(host.getLocation().distance(host.getCurrentDestination()) > c.distance(host.getCurrentDestination())) {
+//						
+//					}
+//				}
+//				
+//			}
+			else {
+				Iterator<Message> iterator = hash.get(key).iterator();
+				double average = 0;
+				int ctr = 0;
+				while(iterator.hasNext()) {
+					double s = (double) iterator.next().getProperty(mSPEED);
+					average = average + s;
+					ctr++;
+				}
+				average = average/ctr;
+				rps = new RoadProperties(key, average, ctr);
+				this.roadProperties.put(key, rps);
+//				System.out.println(this.roadProperties.get(key).getRoadName() + ": "  +this.roadProperties.get(key).getAverageSpeedOfRoad() 
+//						+ " , " + this.roadProperties.get(key).getRoadDensity());
+			}
+		}
+		
+	}
+	
+	//an local road traffic condition awareness kay dapat based la han iya knowledge about han mga front nodes
+	//so an average speed ngan density, based la ghap ha mga front nodes
+	//kay kun igconsider han host pati an mga aadi ha luyo, madako talaga an density han road,
+	//tas mareroute hira tanan if TRAFFIC_JAM an evaluation, 
+	//magkakaproblema kun tanan hira man reroute kay instead nga magmamadagmit an travel time han mga mareroute na dapat an mga
+	//latecomers/mga urhi na nga umabot na nodes, mareroute man gihap an mga nauuna na nodes kay an ira evaluation han traffic
+	//kay as bug os na lane, dapat an ira la unahan para while nareroute an iba na adto luyo, naiibanan an traffic ngan 
+	//dapat naresult to medium flow nala. as a result, diri naiiha paghinulat nga makaovertake an mga aadi ha luyo,
+	//tapos makakaovertake liwat dayon an mga nauuna kay maiibanan an opposite nodes na kailangan maglapos anay para makaovertake hira
+	public String getRoadTrafficConditions(HashMap<String, RoadProperties> hash, DTNHost host) {
+//		double ave_speed = getAverageRoadSpeed(filterFrontNodes(msgs, host), host);
+//		double ave_speed = hash.get(host.getCurrentRoad().getRoadName());
+		
+//		System.out.println(host + "is now getting road traffic conditions...");
+//		System.out.println("My road " + host.getCurrentRoad() + " avespeed: " + hash.get(host.getCurrentRoad()).getRoadDensity());
+		double ave_speed;
+		int density;
+		if(hash.containsKey(host.getCurrentRoad().getRoadName())) {
+			ave_speed = hash.get(host.getCurrentRoad().getRoadName()).getAverageSpeedOfRoad();
+			density  = hash.get(host.getCurrentRoad().getRoadName()).getRoadDensity();
+		}
+		else {
+			ave_speed = host.getCurrentSpeed();
+			density = 1;
+		}
+		
+		if(ave_speed >= 8.0) {
+			if(getRoadDensity(host.getCurrentRoad(), density).equals(HIGH))
+				this.currentRoadCondition = MEDIUM_FLOW;
+			else
+				this.currentRoadCondition = FREE_FLOW;
+		}
+		else if(ave_speed <= 1.0) {
+			if(getRoadDensity(host.getCurrentRoad(), density).equals(HIGH)) {
+				this.currentRoadCondition = TRAFFIC_JAM;
+				System.out.println(host + " Traffic on road " + host.getCurrentRoad().getRoadName() + " currpath: " + host.getPath().getCoords());
+			}
+			else if(getRoadDensity(host.getCurrentRoad(), density).equals(MEDIUM))
+				this.currentRoadCondition = MEDIUM_FLOW;
+			else {
+				this.currentRoadCondition = FREE_FLOW;
+			}
+		}
+		else {
+			if(getRoadDensity(host.getCurrentRoad(), density).equals(LOW))
+				this.currentRoadCondition = FREE_FLOW;
+			else
+				this.currentRoadCondition = MEDIUM_FLOW;
+		}
+				
+//		System.out.println(host + " road condition: " + this.currentRoadCondition + " ------------" + SimClock.getTime());
+//		System.out.println("===============================================================================================");
+		return this.currentRoadCondition;
 	}
 	
 	private double getAverageRoadSpeed(List<Message> msgs, DTNHost host) {
@@ -359,10 +454,12 @@ public class TrafficApplication extends Application{
 		return this.roadDensity;
 	}
 	
-	//changed msgs to consider for local average speed computation. only frontNodes will be considered 
+	//changed msgs to consider for local average speed computation. only frontNodes will be considered
+	//change paramater to HashMap<String, Double(for averagespeed>, Double(for trafficdensity)>
 	public String getTrafficCondition(List<Message> msgs, DTNHost host) {
 		double ave_speed = getAverageRoadSpeed(filterFrontNodes(msgs, host), host);
-
+//		double ave_speed = hash.get(host.getCurrentRoad().getRoadName());
+		
 		if(ave_speed >= 8.0) {
 			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(HIGH))
 				this.currentRoadCondition = MEDIUM_FLOW;
@@ -372,6 +469,7 @@ public class TrafficApplication extends Application{
 		else if(ave_speed <= 1.0) {
 			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(HIGH)) {
 				this.currentRoadCondition = TRAFFIC_JAM;
+				System.out.println(host + " path===" + host.getPath());
 				System.out.println("Traffic on road " + host.getCurrentRoad().getRoadName());
 			}
 			else if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(MEDIUM))
@@ -476,15 +574,40 @@ public class TrafficApplication extends Application{
 	//version 2 of finding reroute path (messages received from other hosts are now considered
 	private void getAlternativePathV2(Coord previousDestination, Coord currentDestination, Coord pathDestination,
 			List<Coord> subpath, DTNHost host, double currentSpeed, double pathSpeed,
-			HashMap<String, Double> evaluatedGroupedMsgs) {
+			HashMap<String, RoadProperties> roadProperties) {
 		
+		System.out.println(host + " current path before pathfinding: " + host.getPath().getCoords());
+		Path p;
 		this.alternativePathFinder = new FastestPathFinder(host.getMovementModel().getOkMapNodeTypes2());
 		
 		MapNode s = host.getMovementModel().getMap().getNodeByCoord(previousDestination);
 		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
 		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(pathDestination);
 		List<MapNode> altMapNodes = new ArrayList<MapNode>();
-		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, evaluatedGroupedMsgs);
+		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, roadProperties);
+		
+//		System.out.println(altMapNodes);
+		if(altMapNodes == null)
+			System.out.println("Path finder couldn't suggest faster routes. Sticking to current path.");
+		else {
+			System.out.println("Found new path: " + altMapNodes);
+//			System.out.println("re: path= " + this.alternativePathFinder.getAlternativePath(s, dest, host.getLocation(), path, host.getCurrentSpeed()));
+//			System.out.println("Getting reroute path");
+			
+			//FIX NEEDED IN HERE
+			//pass by reference ada ini hiya nga part na pagtawag han altMapNodes asya nagkakalurong
+			p = new Path(pathSpeed);
+			for(MapNode n : altMapNodes) {
+				p.addWaypoint(n.getLocation());
+//				System.out.println("MapNode " + n);
+			}
+
+			System.out.println("New path for host: " + p);
+//			System.out.println("in app: " + p);
+//			System.out.println("called host reroute for " + host);
+			host.reroute(p);
+//			System.out.println("done calling host reroute=================================");
+		}
 	}
 	
 	/**

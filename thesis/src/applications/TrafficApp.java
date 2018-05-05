@@ -506,7 +506,7 @@ public class TrafficApp extends Application{
 		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
 		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(pathDestination);
 		List<MapNode> altMapNodes = new ArrayList<MapNode>();
-		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, evaluatedGroupedMsgs);
+//		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, evaluatedGroupedMsgs);
 	}
 	
 	public double round(double value) {
