@@ -486,8 +486,8 @@ public class DTNHost implements Comparable<DTNHost> {
 		dy = (possibleMovement/distance) * (this.destination.getY() -
 				this.location.getY());
 		this.location.translate(dx, dy);
-		if(!this.getGroupId().equals("s"))
-			System.out.println(this + " @" + SimClock.getTime() + ": in move(). Current path is " + getPath());
+//		if(!this.getGroupId().equals("s"))
+//			System.out.println(this + " @" + SimClock.getTime() + ": in move(). Current path is " + getPath());
 	}
 
 	/**

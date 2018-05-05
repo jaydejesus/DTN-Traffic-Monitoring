@@ -88,7 +88,6 @@ public class TrafficApplication extends Application{
 	private int		appMsgSize=1;
 	private Random	rng;
 	private List<Message> msgs_list;
-	private List<Message> neededMsgs;
 	private HashMap<DTNHost, Message> msgsHash;
 	private HashMap<String, List<Message>> groupedMsgs;
 	private HashMap<String, RoadProperties> roadProperties;
@@ -151,7 +150,6 @@ public class TrafficApplication extends Application{
 		this.msgs_list = new ArrayList<Message>();
 		this.sameLaneNodes = new ArrayList<DTNHost>();
 		this.frontNodesMsgs = new ArrayList<Message>();
-		this.neededMsgs = new ArrayList<Message>();
 		this.msgsHash = new HashMap<DTNHost, Message>();
 		this.groupedMsgs = new HashMap<String, List<Message>>();
 		this.roadMsgs = new ArrayList<Message>();
@@ -193,18 +191,16 @@ public class TrafficApplication extends Application{
 						}
 					}
 
-//					System.out.println(host + " Grouping msgs at time " + SimClock.getTime() + "==============================");
-//					System.out.println(SimClock.getTime() + " Grouped msgs: " + this.groupedMsgs);
 					groupMsgsByRoad(msgsHash, host);
-//					System.out.println(host + " Updating msgs at time " + SimClock.getTime() + "==============================");
 					updateGroupedMsgs(this.groupedMsgs);
+					
 //					System.out.println(host + " Computing average speeds based on msgs at time " + SimClock.getTime() + "==============================");
 					computeAverageSpeedPerRoad(this.groupedMsgs, host);
 //					System.out.println("Updated hashmap: " + this.groupedMsgs);
 //					System.out.println("Updated hashmap size: " + this.groupedMsgs.entrySet().size());
 					if(getRoadTrafficConditions(this.roadProperties, host) == TRAFFIC_JAM) {
-//						System.out.println(host + " MUST REROUTE!!!!!");
-//						System.out.println(host + " current path upon knowing traffic: " + host.getPath().getCoords());
+						System.out.println(host + " MUST REROUTE!!!!!");
+						System.out.println(host + " current path upon knowing traffic: " + host.getPath().getCoords());
 						System.out.println(host + " current location: " + host.getLocation() + " at " + host.getCurrentRoad().getRoadName() + " distance to currDest: " + 
 								host.getLocation().distance(host.getCurrentDestination()) + " speed: " + host.getCurrentSpeed());
 						
@@ -229,11 +225,9 @@ public class TrafficApplication extends Application{
 	//groups messages according to its senders' current road, messages from different senders that are in same road are
 	//stored in a hash using the road name, which are common to them, as the key
 	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs, DTNHost host) {
-//		System.out.println("Msgs received: " + msgs.size());
 		for(Message m : msgs.values()) {
 			this.roadMsgs.clear();
 			Road r = (Road) m.getProperty(mCURRENT_ROAD);
-//			System.out.println(host + " received: " + m + " with roadname: " + r.getRoadName());
 			
 			if(this.groupedMsgs.containsKey((String)r.getRoadName())) {
 				List<Message> tempList = this.groupedMsgs.get(r.getRoadName());
@@ -244,12 +238,10 @@ public class TrafficApplication extends Application{
 					if(m.getFrom().equals(msg.getFrom())) {
 						if(m.getCreationTime() == msg.getCreationTime()) {
 							iterator.remove();
-//							System.out.println("IF : " + m + " had a duplicate. Duplicate has been ignored.");
 						}	
 						
 						else if(m.getCreationTime() > msg.getCreationTime()) {
 							iterator.remove();
-//							System.out.println("Replaced " + msg + " with an updated " + m);
 						}
 						
 					}
@@ -261,21 +253,12 @@ public class TrafficApplication extends Application{
 				List<Message> l = new ArrayList<Message>();
 				l.add(m);
 				this.groupedMsgs.put((String) r.getRoadName(), l);
-//				System.out.println("ELSE : added " + m + " to hash with key " + r.getRoadName() + " and value " + this.groupedMsgs.get(r.getRoadName()));
 			}
 		}
-		
-		for(String key : this.groupedMsgs.keySet()) {
-//			System.out.println(host + " key: " + key + " with size " + this.groupedMsgs.get(key).size());
-			for(Message m : this.groupedMsgs.get(key)) {
-//				System.out.println("has value " + m + " " + ((Road) m.getProperty(mCURRENT_ROAD)).getRoadName());
-			} 
-		}
-		
 	}
 	
-	//returns a HashMap containing the evaluated results of the grouped messages
-	//computes the average speed on all known roads with respect to its freshness
+	//returns a HashMap containing the updated version of the grouped messages
+	//removes data of all known roads with respect to its freshness
 	//fresh messages (not greater than 10 seconds ago) are still considered, else it is discarded
 	public void updateGroupedMsgs(HashMap<String, List<Message>> hash) {
 //		System.out.println("Updating messages per group......................");
@@ -291,6 +274,27 @@ public class TrafficApplication extends Application{
 		}
 	}
 	
+	public List<Message> getMyFrontNodes(HashMap<String, List<Message>> hash, DTNHost host) {
+		List<Message> list = new ArrayList<Message>();
+		
+		if(!hash.containsKey(host.getCurrentRoad().getRoadName()))
+			return null;
+		
+		list = hash.get(host.getCurrentRoad().getRoadName());
+		for(Message m : list) {
+			Coord c1 = (Coord) m.getProperty(mLOCATION);
+			Coord c2 = host.getLocation();
+			Coord c3 = host.getCurrentRoad().getEndpoint();
+			if(c1.distance(c3) < c2.distance(c3)) {
+//				System.out.println(m.getFrom() + " is a front node of " + host);
+			}
+		}
+		
+//		System.out.println(host + " same lane nodes " + list);
+		
+		return list;
+	}
+	
 	public void computeAverageSpeedPerRoad(HashMap<String, List<Message>> hash, DTNHost host) {
 		double NaN = -1.0;
 		for(String key : hash.keySet()) {
@@ -302,32 +306,58 @@ public class TrafficApplication extends Application{
 //				System.out.println(this.roadProperties.get(key).getRoadName() + ": "  +this.roadProperties.get(key).getAverageSpeedOfRoad() 
 //						+ " , " + this.roadProperties.get(key).getRoadDensity());
 			}
-//			if(key.equals(host.getCurrentRoad().getRoadName())) {
-//				Iterator<Message> iterator = hash.get(key).iterator();
-//				double average = 0;
-//				int ctr = 0;
-//				while(iterator.hasNext()) {
-//					Message m = iterator.next();
-//					Coord c = (Coord) m.getProperty(mLOCATION);
-//					//f
-//					if(host.getLocation().distance(host.getCurrentDestination()) > c.distance(host.getCurrentDestination())) {
-//						
-//					}
-//				}
-//				
-//			}
+			//if hash has a value for the key
 			else {
+
 				Iterator<Message> iterator = hash.get(key).iterator();
 				double average = 0;
 				int ctr = 0;
-				while(iterator.hasNext()) {
-					double s = (double) iterator.next().getProperty(mSPEED);
-					average = average + s;
-					ctr++;
+				
+				//if an key equal ha road han host
+				if(key.equals(host.getCurrentRoad().getRoadName())) {
+					
+//					while(iterator.hasNext()) {
+//						Message m = iterator.next();
+//						Coord c = (Coord) m.getProperty(mLOCATION);
+//						DTNHost other = m.getFrom();
+//						//check anay kun an sender han message front node ba or diri.
+//						//kun front node, icoconsider hiya ha computation, kun diri hiya front node igdidisregard la
+//						//if location c of otherHost is nearer to the host's destination, otherHost is a front node
+//						//therefore, otherHost is needed for computing average speed
+////						if(c.distance(host.getCurrentDestination()) > host.getLocation().distance(host.getCurrentDestination())) {
+////							System.out.println(host + " considered " + m.getFrom() + " as a front node. ");
+////							double s = (double) m.getProperty(mSPEED);
+////							average = average + s;
+////							ctr++;
+////						}
+//						if(other.getLocation().distance(host.getCurrentDestination()) < host.getLocation().distance(host.getCurrentDestination())){
+//							double s = (double) m.getProperty(mSPEED);
+//							average = average + s;
+//							ctr++;
+//						}
+						for(Message m : getMyFrontNodes(this.groupedMsgs, host)) {
+							average = average + (double) m.getProperty(mSPEED);
+							ctr++;
+						}
+						average = average/ctr;
+						rps = new RoadProperties(key, average, ctr);
+						this.roadProperties.put(key, rps);
+//					}
+					
 				}
-				average = average/ctr;
-				rps = new RoadProperties(key, average, ctr);
-				this.roadProperties.put(key, rps);
+				
+				//if an key diri same ha road han host
+				else {
+					while(iterator.hasNext()) {
+						Message m = iterator.next();
+						double s = (double) m.getProperty(mSPEED);
+						average = average + s;
+						ctr++;
+					}
+					average = average/ctr;
+					rps = new RoadProperties(key, average, ctr);
+					this.roadProperties.put(key, rps);
+				}
 //				System.out.println(this.roadProperties.get(key).getRoadName() + ": "  +this.roadProperties.get(key).getAverageSpeedOfRoad() 
 //						+ " , " + this.roadProperties.get(key).getRoadDensity());
 			}
@@ -542,33 +572,6 @@ public class TrafficApplication extends Application{
 
 	private List<DTNHost> getSameLaneNodes() {
 		return this.sameLaneNodes;
-	}
-	
-	public void getAlternativePath(Coord start, Coord currentDestination, Coord finalDestination, List<Coord> path, DTNHost host, double slowSpeed, double pathSpeed) {
-		this.alternativePathFinder = new FastestPathFinder(host.getMovementModel().getOkMapNodeTypes2());
-		Path p = new Path(pathSpeed);
-		MapNode s = host.getMovementModel().getMap().getNodeByCoord(start);
-		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
-		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(finalDestination);
-		List<MapNode> altMapNodes = new ArrayList<MapNode>();
-		altMapNodes = this.alternativePathFinder.getAlternativePath(s, currentDest, dest, host.getLocation(), slowSpeed, pathSpeed, path);
-		System.out.println("Orig path " + host.getPathSpeed());
-		
-		if(altMapNodes == null)
-			System.out.println("Path finder couldn't suggest faster routes. Sticking to current path.");
-		else {
-//			System.out.println("re: path= " + this.alternativePathFinder.getAlternativePath(s, dest, host.getLocation(), path, host.getCurrentSpeed()));
-//			System.out.println("Getting reroute path");
-			for(MapNode n : altMapNodes) {
-				p.addWaypoint(n.getLocation());
-			}
-
-//			System.out.println("in app: " + p);
-			System.out.println("called host reroute for " + host);
-			host.reroute(p);
-			System.out.println("done calling host reroute=================================");
-		}
-			
 	}
 
 	//version 2 of finding reroute path (messages received from other hosts are now considered
