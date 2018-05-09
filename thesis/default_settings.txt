@@ -7,7 +7,7 @@ Scenario.name = DTN Traffic Monitoring
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
-Scenario.endTime = 100
+Scenario.endTime = 30
 Scenario.nrofHostGroups = 5
 
 

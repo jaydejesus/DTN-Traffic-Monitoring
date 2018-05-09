@@ -4,13 +4,15 @@ public class TripProperties {
 	
 	private Coord start;
 	private Coord destination;
+	private Coord location;
 	private double travelTime;
 	private double startTime;
 	private double endTime;
 	
-	public TripProperties(Coord start, Coord destination, double travelTime) {
+	public TripProperties(Coord start, Coord destination, Coord location, double travelTime) {
 		this.start = start;
 		this.destination = destination;
+		this.location = location;
 	}
 	
 	public Coord getTripStart() {
@@ -43,6 +45,14 @@ public class TripProperties {
 	
 	public void setTravelTime(double time) {
 		travelTime = time;
+	}
+	
+	public Coord getEndLocation() {
+		return location;
+	}
+	
+	public void setEndLocation(Coord location) {
+		this.location = location;
 	}
 	
 	public String toString() {

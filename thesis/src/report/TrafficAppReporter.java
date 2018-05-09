@@ -1,6 +1,5 @@
 package report;
 
-import java.awt.geom.Line2D;
 import java.util.HashMap;
 
 import applications.TrafficApp;

@@ -49,7 +49,7 @@ Group5.pois = 2, 1.0
 Group5.application1 = trafficAppF
 
 # Add report for Ping app
-Report.nrofReports = 1
-#Report.report1 = EventLogReport
-Report.report1 = TrafficAppReporter
+Report.nrofReports = 2
+Report.report1 = TravelTimeReporter
+Report.report2 = TrafficAppReporter
 	

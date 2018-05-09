@@ -15,6 +15,7 @@ import movement.MapBasedMovement;
 import movement.MovementModel;
 import movement.Path;
 import movement.ShortestPathMapBasedMovement;
+import report.TravelTimeReporter;
 import routing.MessageRouter;
 import routing.util.RoutingInfo;
 
@@ -61,6 +62,7 @@ public class DTNHost implements Comparable<DTNHost> {
 	private TripProperties currTrip;
 	private int tripCtr = 0;
 	private HashMap<Integer, TripProperties> trips;
+	private static TravelTimeReporter travelTimeReporter;
 	
 	
 	static {
@@ -124,6 +126,7 @@ public class DTNHost implements Comparable<DTNHost> {
 		this.roads = new HashMap<String, Road>();
 		this.subpath = new ArrayList<Coord>();
 		this.trips = new HashMap<Integer, TripProperties>();
+		this.travelTimeReporter = new TravelTimeReporter();
 		
 		if (movLs != null) { // inform movement listeners about the location
 			for (MovementListener l : movLs) {
@@ -477,23 +480,39 @@ public class DTNHost implements Comparable<DTNHost> {
 		distance = this.location.distance(this.destination);
 		this.travelTime = this.travelTime + timeIncrement;
 
-		//pag maging true ini na condition, dapat igstore ha tripProperties na hash an travel time han host para han current na path  
-		if(getPathDestination() != null && SimClock.getTime() >= 0) {
-			if(this.location.toString().equals(getPathDestination().toString())) {
-//				System.out.println(SimClock.getTime() + " " + this + " has reached its destination " + this.travelTime + ". " + getPathDestination());
-				currTrip.setTravelTime(this.travelTime);
-				currTrip.setTripEndTime(SimClock.getTime());
-				//dapat igstore ha hash an currTrip after ma set an travel time 
-				trips.put(tripCtr, currTrip);
-				tripCtr++;
-			}
-//			System.out.println(this + " " + trips);
-		}
-		
+//		//pag maging true ini na condition, dapat igstore ha tripProperties na hash an travel time han host para han current na path  
+//		if(getPathDestination() != null && SimClock.getTime() >= 0) {
+////			System.out.println(this + " Pathsize: " + path + " " + currTrip.getTripStart() + ", " + currTrip.getTripDestination());
+//			if(this.location.toString().equals(getPathDestination().toString())) {
+////				System.out.println(SimClock.getTime() + " " + this + " has reached its destination " + this.travelTime + ". " + getPathDestination());
+//				currTrip.setTravelTime(this.travelTime);
+//				currTrip.setTripEndTime(SimClock.getTime());
+//				currTrip.setEndLocation(this.location);
+//				travelTimeReporter.createReport(this, currTrip);
+//				//dapat igstore ha hash an currTrip after ma set an travel time 
+//				trips.put(tripCtr, currTrip);
+//				tripCtr++;
+//			}
+////			System.out.println(this + " " + trips);
+//		}
+//		
 		while (possibleMovement >= distance) {
 			// node can move past its next destination
 			this.location.setLocation(this.destination); // snap to destination
 			possibleMovement -= distance;
+			if(this.location.equals(getPathDestination()) && path != null && SimClock.getTime() >= 0) {
+				if(path.getPathSize() > 1) {
+					currTrip.setTravelTime(this.travelTime);
+					currTrip.setTripEndTime(SimClock.getTime());
+					currTrip.setEndLocation(this.location);
+					travelTimeReporter.createReport(this, currTrip);
+					//dapat igstore ha hash an currTrip after ma set an travel time 
+					trips.put(tripCtr, currTrip);
+					tripCtr++;
+					System.out.println(this + " has reached destination " + getPathDestination() + " path " + path.getPathSize());
+				}
+			}
+			
 			if (!setNextWaypoint()) { // get a new waypoint
 				return; // no more waypoints left
 			}
@@ -521,10 +540,10 @@ public class DTNHost implements Comparable<DTNHost> {
 //			this.prevTravelTime = this.travelTime;
 			path = movement.getPath();			
 			this.travelTime = 0;
-//			if(SimClock.getTime() >= 0) {
-				currTrip = new TripProperties(path.getCoords().get(0), path.getCoords().get(path.getCoords().size()-1), this.travelTime);
+			if(path != null) {
+				currTrip = new TripProperties(path.getCoords().get(0), path.getCoords().get(path.getCoords().size()-1), this.location, this.travelTime);
 				currTrip.setTripStartTime(SimClock.getTime());
-//			}
+			}
 //			System.out.println(SimClock.getTime() + " " + this + " getting new path. " + path);
 		}
 
