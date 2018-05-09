@@ -6,12 +6,15 @@
 package report;
 
 import java.awt.geom.Line2D;
+import java.util.HashMap;
 
 import applications.PingApplication;
 import core.Application;
 import core.ApplicationListener;
 import core.DTNHost;
 import core.Road;
+import core.RoadProperties;
+import movement.Path;
 
 /**
  * Reporter for the <code>PingApplication</code>. Counts the number of pings
@@ -81,6 +84,22 @@ public class PingAppReporter extends Report implements ApplicationListener {
 	@Override
 	public void gotEvent(String event, Road myRoad, String basis, double time, double averageSpeed,
 			String trafficCondition, Application app, DTNHost host) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public void gotEvent(String event, Road myRoad, String trafficCondition, double time,
+			HashMap<String, RoadProperties> roadProps, Path currentPath, Application app, DTNHost host) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public void gotEvent(String event, Road myRoad, double time, HashMap<String, RoadProperties> roadProps,
+			Path newPath, Application app, DTNHost host) {
 		// TODO Auto-generated method stub
 		
 	}

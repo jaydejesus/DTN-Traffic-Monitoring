@@ -58,6 +58,9 @@ public class DTNHost implements Comparable<DTNHost> {
 	private double travelTime;
 	private double prevTravelTime;
 	private String groupId;
+	private TripProperties currTrip;
+	private int tripCtr = 0;
+	private HashMap<Integer, TripProperties> trips;
 	
 	
 	static {
@@ -120,6 +123,7 @@ public class DTNHost implements Comparable<DTNHost> {
 		this.pathRoads = new ArrayList<String>();
 		this.roads = new HashMap<String, Road>();
 		this.subpath = new ArrayList<Coord>();
+		this.trips = new HashMap<Integer, TripProperties>();
 		
 		if (movLs != null) { // inform movement listeners about the location
 			for (MovementListener l : movLs) {
@@ -434,13 +438,16 @@ public class DTNHost implements Comparable<DTNHost> {
 		if (!isMovementActive() || SimClock.getTime() < this.nextTimeToMove) {
 			return;
 		}
+		
 		if (this.destination == null) {
 			this.prevTravelTime = this.travelTime;
+//			System.out.println(" 1 " + this + " has reached its destination. Travel time: " + this.prevTravelTime);
 			if (!setNextWaypoint()) {
 				System.out.println("DTNHost-null destination...->setNextWaypoint");
 				return;
 			}
 		}
+		
 		//get nodes on host's current road (same and opposite lane)
 		this.getOtherNodesOnMyRoad();
 		
@@ -470,6 +477,19 @@ public class DTNHost implements Comparable<DTNHost> {
 		distance = this.location.distance(this.destination);
 		this.travelTime = this.travelTime + timeIncrement;
 
+		//pag maging true ini na condition, dapat igstore ha tripProperties na hash an travel time han host para han current na path  
+		if(getPathDestination() != null && SimClock.getTime() >= 0) {
+			if(this.location.toString().equals(getPathDestination().toString())) {
+//				System.out.println(SimClock.getTime() + " " + this + " has reached its destination " + this.travelTime + ". " + getPathDestination());
+				currTrip.setTravelTime(this.travelTime);
+				currTrip.setTripEndTime(SimClock.getTime());
+				//dapat igstore ha hash an currTrip after ma set an travel time 
+				trips.put(tripCtr, currTrip);
+				tripCtr++;
+			}
+//			System.out.println(this + " " + trips);
+		}
+		
 		while (possibleMovement >= distance) {
 			// node can move past its next destination
 			this.location.setLocation(this.destination); // snap to destination
@@ -486,8 +506,8 @@ public class DTNHost implements Comparable<DTNHost> {
 		dy = (possibleMovement/distance) * (this.destination.getY() -
 				this.location.getY());
 		this.location.translate(dx, dy);
-//		if(!this.getGroupId().equals("s"))
-//			System.out.println(this + " @" + SimClock.getTime() + ": in move(). Current path is " + getPath());
+		
+//		System.out.println(this + " " + travelTime);
 	}
 
 	/**
@@ -498,11 +518,14 @@ public class DTNHost implements Comparable<DTNHost> {
 	 */
 	private boolean setNextWaypoint() {
 		if (path == null) {
-			this.prevTravelTime = this.travelTime;
-//			if(this.toString().equals("n30"))
-//				System.out.println(this + " travel time: " + this.prevTravelTime);
-			path = movement.getPath();
+//			this.prevTravelTime = this.travelTime;
+			path = movement.getPath();			
 			this.travelTime = 0;
+//			if(SimClock.getTime() >= 0) {
+				currTrip = new TripProperties(path.getCoords().get(0), path.getCoords().get(path.getCoords().size()-1), this.travelTime);
+				currTrip.setTripStartTime(SimClock.getTime());
+//			}
+//			System.out.println(SimClock.getTime() + " " + this + " getting new path. " + path);
 		}
 
 		if (path == null || !path.hasNext()) {
@@ -646,7 +669,12 @@ public class DTNHost implements Comparable<DTNHost> {
 	
 	
 	public Coord getPathDestination() {
-		return this.path.getCoords().get(this.path.getCoords().size()-1);
+		if(this.path == null) {
+//			System.out.println(this + " has stopped. no current path destination");
+			return this.destination;
+		}
+		else
+			return this.path.getCoords().get(this.path.getPathSize()-1);
 	}
 	
 	public Road<String, Coord, Coord> getCurrentRoad(){
@@ -819,12 +847,10 @@ public class DTNHost implements Comparable<DTNHost> {
 	}
 	
 	public double getCurrentSpeed() {
-		// TODO Auto-generated method stub
 		return this.speed;
 	}
 
 	public String getCurrentRoadStatus() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -850,18 +876,22 @@ public class DTNHost implements Comparable<DTNHost> {
 	}
 	
 	public void reroute(Path p) {
-		System.out.println(this + " is now going to prev destination: " + p.getCoords().get(0));
-		System.out.println("Setting reroute path of host: " + p);
+//		System.out.println(this + " is now going to prev destination: " + p.getCoords().get(0));
+//		System.out.println("Setting reroute path of host: " + p);
 //		System.out.println("Subpath: " + this.getSubpath());
-		System.out.println("Previous path: " + this.path);
+//		System.out.println("Previous path: " + this.path);
 //		for(int i = this.pathIndex; i < this.path.getCoords().size(); i++) {
 //			p.addWaypoint(this.path.getCoords().get(i));
 //		}
-		System.out.println("rerouted path: " + p);
-		this.path = p;
-		
-		this.speed = p.getSpeed();
-		this.destination = p.getCoords().get(0);
+//		System.out.println("rerouted path: " + p);
+		if(p != null) {
+			this.path = p;
+			this.speed = p.getSpeed();
+		}
+//		this.prevDestination = this.destination;
+//		this.destination = p.getCoords().get(0);
+//		this.currentRoad = new Road("["+this.prevDestination + ", " + this.destination+"]", this.prevDestination, this.destination);
+		setNextWaypoint();
 	}
 	
 	public void setReroutePath(Path p) {
@@ -874,6 +904,10 @@ public class DTNHost implements Comparable<DTNHost> {
 	
 	public double getTravelTime() {
 		return this.prevTravelTime;
+	}
+	
+	public TripProperties getCurrentTrip() {
+		return this.currTrip;
 	}
 	
 	public void updateTravelTime(double travelTime) {

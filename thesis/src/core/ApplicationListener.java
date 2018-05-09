@@ -5,6 +5,9 @@
 package core;
 
 import java.awt.geom.Line2D;
+import java.util.HashMap;
+
+import movement.Path;
 
 /**
  * <p>
@@ -37,5 +40,11 @@ public interface ApplicationListener {
 
 	void gotEvent(String event, Road myRoad, String basis, double time, double averageSpeed, String trafficCondition, Application app,
 			DTNHost host);
+
+	void gotEvent(String event, Road myRoad, String trafficCondition, double time,
+			HashMap<String, RoadProperties> roadProps, Path currentPath, Application app, DTNHost host);
+
+	void gotEvent(String event, Road myRoad, double time, HashMap<String, RoadProperties> roadProps, Path newPath,
+			Application app, DTNHost host);
 
 }

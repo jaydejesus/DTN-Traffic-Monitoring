@@ -229,7 +229,7 @@ public class FastestPathFinder {
 			double currentSpeed, double pathSpeed, List<Coord> subpath, HashMap<String, RoadProperties> roadProperties) {
 		List<MapNode> path = new LinkedList<MapNode>();
 
-		System.out.println("here in altpath");
+//		System.out.println("here in altpath");
 		double rerouteTravTime = location.distance(s.getLocation())/pathSpeed;
 		double currentPathTravTime = location.distance(currentDest.getLocation())/currentSpeed;
 		
@@ -262,7 +262,7 @@ public class FastestPathFinder {
 
 			path.add(0, s); // finally put the source node to first node
 		}
-		System.out.println("reroute path: " + path);
+//		System.out.println("reroute path: " + path);
 		
 //		System.out.println("reroute path traveltime");
 		for(int i = 0; i < path.size()-1; i++) {
@@ -277,7 +277,7 @@ public class FastestPathFinder {
 //			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/speed));
 			rerouteTravTime = rerouteTravTime + (c1.distance(c2)/speed);
 		}
-		System.out.println("reroute path total travel time : " + rerouteTravTime);
+//		System.out.println("reroute path total travel time : " + rerouteTravTime);
 //		System.out.println("current paaaath traveltimes");
 		for(int i = 0; i < subpath.size()-1; i++) {
 			Coord c1 = subpath.get(i);
@@ -291,12 +291,12 @@ public class FastestPathFinder {
 //			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/speed));
 			currentPathTravTime = currentPathTravTime + (c1.distance(c2)/speed);
 		}
-		System.out.println("current path total travel time : " + currentPathTravTime);
+//		System.out.println("current path total travel time : " + currentPathTravTime);
 		if(rerouteTravTime > currentPathTravTime) {
 //			System.out.println("No reroute suggestions. returning null");
 			path = null;
 		}
-		System.out.println("Returning path to app: " + path);
+//		System.out.println("Returning path to app: " + path);
 		return path;
 
 	}

@@ -5,6 +5,9 @@
 package core;
 
 import core.Road;
+import movement.Path;
+
+import java.util.HashMap;
 import java.util.List;
 
 import applications.TrafficApp;
@@ -140,6 +143,20 @@ public abstract class Application {
 			DTNHost host) {
 		for (ApplicationListener al : this.aListeners) {
 			al.gotEvent(event, params, this, host);
+		}
+	}
+
+	public void sendEventToListeners(String event, Road<String, Coord, Coord> currentRoad, String trafficCondition,
+			double time, HashMap<String, RoadProperties> roadProperties, Path path, Object trafficApp, DTNHost host) {
+		for (ApplicationListener al : this.aListeners) {
+			al.gotEvent(event, currentRoad, trafficCondition, time, roadProperties, path, this, host);
+		}
+	}
+
+	public void sendEventToListeners(String event, Road<String, Coord, Coord> currentRoad, double time,
+			HashMap<String, RoadProperties> roadProperties, Path path, Object object, DTNHost host) {
+		for (ApplicationListener al : this.aListeners) {
+			al.gotEvent(event, currentRoad, time, roadProperties, path, this, host);
 		}
 	}
 }

@@ -7,8 +7,8 @@ Scenario.name = DTN Traffic Monitoring
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
-Scenario.endTime = 10000
-Scenario.nrofHostGroups = 4
+Scenario.endTime = 100
+Scenario.nrofHostGroups = 5
 
 
 ## Interface-specific settings:
@@ -58,10 +58,11 @@ Group.interface1 = wifiDirectInterface
 # Message TTL of 300 minutes (5 hours)
 Group.msgTtl = 1
 Group.sendQueueMode = 2
+Group.waitTime = 0.0,0.0
 
 # Walking speeds
 Group1.speed = 8.0, 11.0
-Group1.nrofHosts = 50
+Group1.nrofHosts = 1
 Group1.groupID = n
 Group1.pois = 1, 1.0
 
@@ -79,6 +80,12 @@ Group4.speed = 0.3, 0.5
 Group4.nrofHosts = 25
 Group4.groupID = s
 Group4.pois = 2, 1.0
+
+Group5.speed = 8.0, 11.0
+Group5.nrofHosts = 50
+Group5.groupID = m
+Group5.pois = 1, 1.0
+
 
 ## Movement model settings
 # seed for movement models' pseudo random number generator (default = 0)
