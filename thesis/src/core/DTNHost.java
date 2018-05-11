@@ -31,7 +31,7 @@ public class DTNHost implements Comparable<DTNHost> {
 	private Coord location; 	// where is the host
 	private Coord destination;	// where is it going
 	private Coord prevDestination;
-	
+	private Coord prevLocation;
 	
 	private MessageRouter router;
 	private MovementModel movement;
@@ -61,6 +61,8 @@ public class DTNHost implements Comparable<DTNHost> {
 	private String groupId;
 	private TripProperties currTrip;
 	private int tripCtr = 0;
+	private int rerouteCtr;
+	private double tripTravelDistance;
 	private HashMap<Integer, TripProperties> trips;
 	private static TravelTimeReporter travelTimeReporter;
 	
@@ -115,6 +117,7 @@ public class DTNHost implements Comparable<DTNHost> {
 //			this.location = ((ShortestPathMapBasedMovement)this.movement).getInitLocation();
 //		} else {
 			this.location = movement.getInitialLocation();
+			this.prevLocation = this.location;
 //		}
 
 		this.nextTimeToMove = movement.nextPathAvailable();
@@ -444,7 +447,6 @@ public class DTNHost implements Comparable<DTNHost> {
 		
 		if (this.destination == null) {
 			this.prevTravelTime = this.travelTime;
-//			System.out.println(" 1 " + this + " has reached its destination. Travel time: " + this.prevTravelTime);
 			if (!setNextWaypoint()) {
 				System.out.println("DTNHost-null destination...->setNextWaypoint");
 				return;
@@ -462,54 +464,49 @@ public class DTNHost implements Comparable<DTNHost> {
 			frontDistance = this.checkFrontDistance(frontNode);
 			
 			double temp = frontDistance - (frontDistance * 0.75);	
+
 			posMov = temp;
-			if(temp <= 10.0 && !this.canOvertake(getOppositeLaneNodes(), frontNode))
+			if(frontDistance <= 10.0 && !this.canOvertake(getOppositeLaneNodes(), frontNode)) {
 				this.slowDown(frontNode);
+			}
 			//check if host can overtake overtake frontNode
 			else if(this.canOvertake(getOppositeLaneNodes(), frontNode) && this.getLocation().distance(frontNode.getLocation()) < FRONT_DISTANCE) {
 				overtake();
-				posMov = timeIncrement * speed;
 			}
+			else if(frontDistance > 10.0) {
+				overtake();
+			}
+			
 			possibleMovement = timeIncrement * speed;
 		}
 		else {
-			if(frontNode == null && this.canOvertake(getOppositeLaneNodes(), frontNode))
-				overtake();
+//			if(frontNode == null && this.canOvertake(getOppositeLaneNodes(), frontNode))
+			overtake();
 			possibleMovement = timeIncrement * speed;
 		}
+		
 		distance = this.location.distance(this.destination);
 		this.travelTime = this.travelTime + timeIncrement;
-
-//		//pag maging true ini na condition, dapat igstore ha tripProperties na hash an travel time han host para han current na path  
-//		if(getPathDestination() != null && SimClock.getTime() >= 0) {
-////			System.out.println(this + " Pathsize: " + path + " " + currTrip.getTripStart() + ", " + currTrip.getTripDestination());
-//			if(this.location.toString().equals(getPathDestination().toString())) {
-////				System.out.println(SimClock.getTime() + " " + this + " has reached its destination " + this.travelTime + ". " + getPathDestination());
-//				currTrip.setTravelTime(this.travelTime);
-//				currTrip.setTripEndTime(SimClock.getTime());
-//				currTrip.setEndLocation(this.location);
-//				travelTimeReporter.createReport(this, currTrip);
-//				//dapat igstore ha hash an currTrip after ma set an travel time 
-//				trips.put(tripCtr, currTrip);
-//				tripCtr++;
-//			}
-////			System.out.println(this + " " + trips);
-//		}
-//		
+		
 		while (possibleMovement >= distance) {
 			// node can move past its next destination
 			this.location.setLocation(this.destination); // snap to destination
 			possibleMovement -= distance;
+			
 			if(this.location.equals(getPathDestination()) && path != null && SimClock.getTime() >= 0) {
 				if(path.getPathSize() > 1) {
+					this.tripTravelDistance += this.prevLocation.distance(this.location);
+					System.out.println(this.tripTravelDistance);
+					currTrip.setTripTravelDistance(this.tripTravelDistance);
 					currTrip.setTravelTime(this.travelTime);
 					currTrip.setTripEndTime(SimClock.getTime());
-					currTrip.setEndLocation(this.location);
-					travelTimeReporter.createReport(this, currTrip);
+					currTrip.setRerouteCtr(rerouteCtr);
+					if(this.getGroupId().equals("n"))
+						travelTimeReporter.createReport(this, currTrip);
 					//dapat igstore ha hash an currTrip after ma set an travel time 
-					trips.put(tripCtr, currTrip);
-					tripCtr++;
-					System.out.println(this + " has reached destination " + getPathDestination() + " path " + path.getPathSize());
+//					trips.put(tripCtr, currTrip);
+//					tripCtr++;
+//					System.out.println(this + " has reached destination " + getPathDestination() + " path " + path.getPathSize());
 				}
 			}
 			
@@ -519,14 +516,17 @@ public class DTNHost implements Comparable<DTNHost> {
 			distance = this.location.distance(this.destination);
 		}
 
+		
 		// move towards the point for possibleMovement amount
 		dx = (possibleMovement/distance) * (this.destination.getX() -
 				this.location.getX());
 		dy = (possibleMovement/distance) * (this.destination.getY() -
 				this.location.getY());
 		this.location.translate(dx, dy);
-		
-//		System.out.println(this + " " + travelTime);
+//		if(this.getGroupId().equals("n"))
+//			System.out.println(this + " prev: " + this.prevLocation + " curr: " + this.location);
+//		
+//		System.out.println(this + " curr: " + this.location);
 	}
 
 	/**
@@ -541,8 +541,13 @@ public class DTNHost implements Comparable<DTNHost> {
 			path = movement.getPath();			
 			this.travelTime = 0;
 			if(path != null) {
-				currTrip = new TripProperties(path.getCoords().get(0), path.getCoords().get(path.getCoords().size()-1), this.location, this.travelTime);
+				tripCtr++;
+				rerouteCtr = 0;
+				tripTravelDistance = 0;
+				prevLocation = path.getCoords().get(0);
+				currTrip = new TripProperties(path.getCoords().get(0), path.getCoords().get(path.getCoords().size()-1), this.travelTime);
 				currTrip.setTripStartTime(SimClock.getTime());
+				currTrip.setRerouteCtr(rerouteCtr);
 			}
 //			System.out.println(SimClock.getTime() + " " + this + " getting new path. " + path);
 		}
@@ -807,27 +812,25 @@ public class DTNHost implements Comparable<DTNHost> {
 		return false;
 	}
 	
-	public void slowDown(double tempSpeed) {
-		if(!this.toString().startsWith("s"))
-			this.speed = tempSpeed;
-	}
+//	public void slowDown(double tempSpeed) {
+//		if(!this.toString().startsWith("s"))
+//			this.speed = tempSpeed;
+//	}
 	
 	public void slowDown(DTNHost front) {
-		double s = this.speed - (this.speed * 0.25);
+		double spd = this.speed - (this.speed * 0.25);
 		
 		if(!this.getGroupId().equals("s") && this.speed > front.getCurrentSpeed()) {
-			this.speed = s;//this.speed - (this.speed * 0.25);
+			this.speed = spd;//this.speed - (this.speed * 0.25);
 		}
-		if(s < front.getCurrentSpeed() && front.getCurrentSpeed() > 0.3 && front.getCurrentSpeed() < 0.5) {
+		if(spd < front.getCurrentSpeed() && front.getCurrentSpeed() >= 0.3 && front.getCurrentSpeed() <= 0.5) {
 			this.speed = front.getCurrentSpeed();
 		}
-//		if(!this.toString().startsWith("s") && this.speed < front.getCurrentSpeed())
-//			this.speed = front.speed;
-			
+//		System.out.println(this + " is slowing down " + this.speed);
 	}
 	
 	public void overtake() {
-		if(!this.toString().startsWith("s"))
+		if(!this.toString().startsWith("s")) {
 			try {
 				if(this.speed < this.path.getSpeed())
 					this.speed = this.speed + (this.speed * 0.25);
@@ -836,6 +839,8 @@ public class DTNHost implements Comparable<DTNHost> {
 			}catch(Exception e) {
 				
 			}
+//			System.out.println(this + " is overtaking " + this.speed);
+		}
 	}
 	
 	public boolean canOvertake(List<DTNHost> opposite, DTNHost front) {
@@ -906,6 +911,9 @@ public class DTNHost implements Comparable<DTNHost> {
 		if(p != null) {
 			this.path = p;
 			this.speed = p.getSpeed();
+			rerouteCtr++;
+			if(this.getGroupId().equals("n"))
+				this.travelTimeReporter.rerouteReport(this, this.path, SimClock.getTime());
 		}
 //		this.prevDestination = this.destination;
 //		this.destination = p.getCoords().get(0);

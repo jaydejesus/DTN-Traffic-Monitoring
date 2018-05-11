@@ -7,8 +7,8 @@ Scenario.name = DTN Traffic Monitoring
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
-Scenario.endTime = 30
-Scenario.nrofHostGroups = 5
+Scenario.endTime = 1000
+Scenario.nrofHostGroups = 6
 
 
 ## Interface-specific settings:
@@ -51,7 +51,7 @@ PointsOfInterest.poiFile2 = data/2points.wkt
 # Common settings for all groups
 Group.movementModel = ShortestPathMapBasedMovement
 Group.router = EpidemicRouter
-Group.bufferSize = 500M
+Group.bufferSize = 5000G
 # All nodes have the Wifi Direct interface
 Group.nrofInterfaces = 1
 Group.interface1 = wifiDirectInterface
@@ -62,8 +62,8 @@ Group.waitTime = 0.0,0.0
 
 # Walking speeds
 Group1.speed = 8.0, 11.0
-Group1.nrofHosts = 1
-Group1.groupID = n
+Group1.nrofHosts = 50
+Group1.groupID = m
 Group1.pois = 1, 1.0
 
 Group2.speed = 0.3, 0.5
@@ -72,9 +72,9 @@ Group2.groupID = s
 Group2.pois = 1, 1.0
 
 Group3.speed = 8.0, 11.0
-Group3.nrofHosts = 50
-Group3.groupID = m
-Group3.pois = 2, 1.0
+Group3.nrofHosts = 10
+Group3.groupID = n
+Group3.pois = 1, 1.0
 
 Group4.speed = 0.3, 0.5
 Group4.nrofHosts = 25
@@ -84,7 +84,12 @@ Group4.pois = 2, 1.0
 Group5.speed = 8.0, 11.0
 Group5.nrofHosts = 50
 Group5.groupID = m
-Group5.pois = 1, 1.0
+Group5.pois = 2, 1.0
+
+Group6.speed = 8.0, 11.0
+Group6.nrofHosts = 10
+Group6.groupID = n
+Group6.pois = 2, 1.0
 
 
 ## Movement model settings
@@ -146,12 +151,12 @@ Events.nrof = 1
 
 ## Reports - all report names have to be valid report classes
 # how many reports to load
-Report.nrofReports = 1
+Report.nrofReports = 2
 Report.reportDir = reports/DTN Traffic Monitoring
 # Report classes to load
 #Report.report1 = EventLogReport
 Report.report1 = TrafficAppReporter
-#Report.report3 = PingAppReporter
+Report.report2 = TravelTimeReporter
 
 
 

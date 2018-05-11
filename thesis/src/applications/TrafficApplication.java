@@ -192,7 +192,7 @@ public class TrafficApplication extends Application{
 					}
 
 					groupMsgsByRoad(msgsHash, host);
-					updateGroupedMsgs(this.groupedMsgs);
+					updateGroupedMsgs(this.groupedMsgs, host);
 					//computes average speeds of all known roads, if road is your current road, average speed is based on front nodes
 					computeAverageSpeedPerRoad(this.groupedMsgs, host);
 					//computes average speeds of all known roads
@@ -272,16 +272,32 @@ public class TrafficApplication extends Application{
 	//returns a HashMap containing the updated version of the grouped messages
 	//removes data of all known roads with respect to its freshness
 	//fresh messages (not greater than 10 seconds ago) are still considered, else it is discarded
-	public void updateGroupedMsgs(HashMap<String, List<Message>> hash) {
+	public void updateGroupedMsgs(HashMap<String, List<Message>> hash, DTNHost host) {
+		List<Message> toDelete = new ArrayList<Message>();
+		
 		for(String key : hash.keySet()) {
 			Iterator<Message> iterator = hash.get(key).iterator();
 			while(iterator.hasNext()) {
 				Message m = iterator.next();
 				if((SimClock.getTime() - m.getCreationTime()) > FRESHNESS) {
+//					if(host.getRouter().hasMessage(m.getId()))
+//						host.deleteMessage(m.getId(), false);
+//					if(!toDelete.contains(m))
+//						toDelete.add(m);
 					iterator.remove();
+					
 				}
 			}
 		}
+		
+//		for(Message m : toDelete) {
+//			if(host.getRouter().hasMessage(m.getId())) {
+//				System.out.println(host + " has deleted " + m.getId() + " from buffer");
+////				host.deleteMessage(m.getId(), false);
+//				host.getRouter().deleteMessage(m.getId(), false);
+//			}
+//		}
+//		System.out.println(host + " " + host.getMessageCollection());
 	}
 
 	//returns list of msgs from host's front nodes

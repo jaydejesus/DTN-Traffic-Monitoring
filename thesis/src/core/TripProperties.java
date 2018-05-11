@@ -4,15 +4,16 @@ public class TripProperties {
 	
 	private Coord start;
 	private Coord destination;
-	private Coord location;
 	private double travelTime;
 	private double startTime;
 	private double endTime;
+	private double tripTravelDistance;
+	private int rerouteCtr = 0;
+	private String tripID;
 	
-	public TripProperties(Coord start, Coord destination, Coord location, double travelTime) {
+	public TripProperties(Coord start, Coord destination, double travelTime) {
 		this.start = start;
 		this.destination = destination;
-		this.location = location;
 	}
 	
 	public Coord getTripStart() {
@@ -47,17 +48,34 @@ public class TripProperties {
 		travelTime = time;
 	}
 	
-	public Coord getEndLocation() {
-		return location;
-	}
-	
-	public void setEndLocation(Coord location) {
-		this.location = location;
-	}
-	
 	public String toString() {
-		String str = "from:" + getTripStart() + "-to: " + getTripDestination() + " start_time:" + startTime + " end_time:" + endTime + " for " + travelTime + "s";
+		String str = "\t" + getTripStart() + "->" + getTripDestination() + " start_time:" + startTime + 
+				" end_time:" + endTime + " reroute_count: " + getRerouteCtr() + " travel_time: " + travelTime + "s";
 		
 		return str;
+	}
+
+	public int getRerouteCtr() {
+		return rerouteCtr;
+	}
+
+	public void setRerouteCtr(int rerouteCtr) {
+		this.rerouteCtr = rerouteCtr;
+	}
+
+	public double getTripTravelDistance() {
+		return tripTravelDistance;
+	}
+
+	public void setTripTravelDistance(double tripTravelDistance) {
+		this.tripTravelDistance = tripTravelDistance;
+	}
+
+	public String getTripID() {
+		return tripID;
+	}
+
+	public void setTripID(String tripID) {
+		this.tripID = tripID;
 	}
 }
