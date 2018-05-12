@@ -65,6 +65,7 @@ public class DTNHost implements Comparable<DTNHost> {
 	private double tripTravelDistance;
 	private HashMap<Integer, TripProperties> trips;
 	private static TravelTimeReporter travelTimeReporter;
+	private boolean reported = false;
 	
 	
 	static {
@@ -494,15 +495,16 @@ public class DTNHost implements Comparable<DTNHost> {
 			possibleMovement -= distance;
 			
 			if(this.location.equals(getPathDestination()) && path != null && SimClock.getTime() >= 0) {
-				if(path.getPathSize() > 1) {
+				if(path.getPathSize() > 1 && !this.reported) {
 					this.tripTravelDistance += this.prevLocation.distance(this.location);
-					System.out.println(this.tripTravelDistance);
+//					System.out.println(this + " total distance travelled: " + this.tripTravelDistance);
 					currTrip.setTripTravelDistance(this.tripTravelDistance);
 					currTrip.setTravelTime(this.travelTime);
 					currTrip.setTripEndTime(SimClock.getTime());
 					currTrip.setRerouteCtr(rerouteCtr);
-					if(this.getGroupId().equals("n"))
+					if(!this.getGroupId().equals("s"))
 						travelTimeReporter.createReport(this, currTrip);
+					this.reported = true;
 					//dapat igstore ha hash an currTrip after ma set an travel time 
 //					trips.put(tripCtr, currTrip);
 //					tripCtr++;
@@ -516,7 +518,7 @@ public class DTNHost implements Comparable<DTNHost> {
 			distance = this.location.distance(this.destination);
 		}
 
-		
+		this.prevLocation = this.location;
 		// move towards the point for possibleMovement amount
 		dx = (possibleMovement/distance) * (this.destination.getX() -
 				this.location.getX());
@@ -544,6 +546,7 @@ public class DTNHost implements Comparable<DTNHost> {
 				tripCtr++;
 				rerouteCtr = 0;
 				tripTravelDistance = 0;
+				this.reported = false;
 				prevLocation = path.getCoords().get(0);
 				currTrip = new TripProperties(path.getCoords().get(0), path.getCoords().get(path.getCoords().size()-1), this.travelTime);
 				currTrip.setTripStartTime(SimClock.getTime());

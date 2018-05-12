@@ -3,11 +3,11 @@
 #
 
 ## Scenario settings
-Scenario.name = DTN Traffic Monitoring
+Scenario.name = Experiment1(No TrafficApp)_S1
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
-Scenario.endTime = 1000
+Scenario.endTime = 1800
 Scenario.nrofHostGroups = 6
 
 
@@ -21,7 +21,7 @@ Scenario.nrofHostGroups = 6
 # "Wifi Direct" interface for all nodes
 wifiDirectInterface.type = InterferenceLimitedInterface
 # Transmit speed of 2 Mbps = 250kBps
-wifiDirectInterface.transmitSpeed = 250000k
+wifiDirectInterface.transmitSpeed = 31250k
 wifiDirectInterface.transmitRange = 200
 
 ## Group-specific settings:
@@ -62,12 +62,12 @@ Group.waitTime = 0.0,0.0
 
 # Walking speeds
 Group1.speed = 8.0, 11.0
-Group1.nrofHosts = 50
+Group1.nrofHosts = 30
 Group1.groupID = m
 Group1.pois = 1, 1.0
 
 Group2.speed = 0.3, 0.5
-Group2.nrofHosts = 25
+Group2.nrofHosts = 10
 Group2.groupID = s
 Group2.pois = 1, 1.0
 
@@ -77,12 +77,12 @@ Group3.groupID = n
 Group3.pois = 1, 1.0
 
 Group4.speed = 0.3, 0.5
-Group4.nrofHosts = 25
+Group4.nrofHosts = 10
 Group4.groupID = s
 Group4.pois = 2, 1.0
 
 Group5.speed = 8.0, 11.0
-Group5.nrofHosts = 50
+Group5.nrofHosts = 30
 Group5.groupID = m
 Group5.pois = 2, 1.0
 
@@ -151,14 +151,14 @@ Events.nrof = 1
 
 ## Reports - all report names have to be valid report classes
 # how many reports to load
-Report.nrofReports = 2
-Report.reportDir = reports/DTN Traffic Monitoring
+Report.nrofReports = 3
+Report.reportDir = reports/DTN Traffic Monitoring/all nodes(-slow nodes)/E1
 # Report classes to load
 #Report.report1 = EventLogReport
 Report.report1 = TrafficAppReporter
 Report.report2 = TravelTimeReporter
-
-
+Report.report3 = MessageStatsReport
+#Report.report4 = LocationSnapshotReport
 
 ## Optimization settings -- these affect the speed of the simulation
 ## see World class for details.

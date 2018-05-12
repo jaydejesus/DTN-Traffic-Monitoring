@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import core.DTNHost;
+import core.SimScenario;
 import core.TripProperties;
 import movement.Path;
 
@@ -21,6 +22,7 @@ public class TravelTimeReporter extends Report{
 		String travelTime = "" + trip.getTravelTime();
 		String rerouteCtr = "" + trip.getRerouteCtr();
 		String distance = "" + trip.getTripStart().distance(trip.getTripDestination());
+		String travelled = "" + trip.getTripTravelDistance();
 		List<TripProperties> tripList = new ArrayList<TripProperties>();
 		
 		if(!hash.containsKey(host)) {
@@ -36,8 +38,8 @@ public class TravelTimeReporter extends Report{
 			hash.put(host, tripList);
 		}
 		
-		String str = String.format("%4s%5s%s%3s%s%3s%s%3s%s%3s%s%3s%s%3s%s", host, ' ', from, ' ', to, ' ', start, ' ', 
-				end, ' ', travelTime, ' ', rerouteCtr, ' ', distance);
+		String str = String.format("%4s%5s%s%3s%s%3s%s%3s%s%3s%s%3s%s%3s%s%3s%s", host, ' ', from, ' ', to, ' ', start, ' ', 
+				end, ' ', travelTime, ' ', rerouteCtr, ' ', distance, '-', travelled);
 		list.add(str);
 	}
 	
@@ -45,8 +47,6 @@ public class TravelTimeReporter extends Report{
 		String str = host + " " + rerouteTime + " " + p;
 		list2.add(str);
 	}
-
-	
 	
 	public void done() {
 //		System.out.println("Writing traffic reports");
@@ -54,13 +54,19 @@ public class TravelTimeReporter extends Report{
 //		for(String s : list) {
 //			write(s);
 //		}
+//		String str = "Experiment Name: " + SimScenario.getInstance().getName() + "\n" + 
+//				"Experiment duration: " + SimScenario.getInstance().getEndTime() + " seconds \n" + 
+//				"Total number of nodes: " + SimScenario.getInstance().getHosts().size() + "\n" + 
+//				"Number of slow nodes: " + getSettings().getSetting(SimScenario.GROUP_ID_S);
+//		write(str);
+		
 		System.out.println("Writing reroute reports");
 		write("reroute reports:");
 		for(String s : list2) {
-			write(s);
+			write(s + "\n");
 		}
 		write("\n");
-		write("trips per node: ");
+		write("record of trips per node: ");
 		for(DTNHost h : hash.keySet()) {
 			double averageTravelTime = 0;
 			write(h + " trips: " + hash.get(h).size());
@@ -68,8 +74,8 @@ public class TravelTimeReporter extends Report{
 				averageTravelTime += t.getTravelTime();
 				write(t.toString());
 			}
-			write(h + "'s Average Travel Time: " + averageTravelTime/hash.get(h).size() + " basis: " + averageTravelTime + " / " + hash.get(h).size());
-			write("\n");
+			write(h + "'s Average Travel Time: " + averageTravelTime/hash.get(h).size() + "\n");
+//			write("\n");
 		}
 		write("Done!");
 		super.done();

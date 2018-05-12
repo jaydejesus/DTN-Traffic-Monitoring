@@ -539,6 +539,7 @@ public class TrafficApplication extends Application{
 	
 	public int getRoadCapacity(Road r) {
 		this.roadCapacity =(int) (((Coord)r.getStartpoint()).distance((Coord)r.getEndpoint()) / VEHICLE_SIZE);
+		System.out.println(this.roadCapacity);
 		return this.roadCapacity;
 	}
 	
