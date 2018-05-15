@@ -3,7 +3,6 @@ package report;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -17,9 +16,7 @@ import movement.MovementModel;
 import movement.Path;
 
 public class TravelTimeReporter extends Report{
-	private static final String directory = "";
-	private String fileName = "E1_NO_APP_";
-	private String seedNo;
+	private static final String directory = "/home/jaydejesus/git/dtn-traffic-monitoring/thesis/reports/DTN Traffic Monitoring/all nodes(-slow nodes)/";
 //	private static int row = 1;
 	private static TreeMap<DTNHost, List<TripProperties>> hash = new TreeMap<DTNHost, List<TripProperties>>();
 	private static List<String> list = new ArrayList<String>();
@@ -79,8 +76,8 @@ public class TravelTimeReporter extends Report{
 	public void excelize() {
 		Collections.addAll(headers, "Host", "Nr Of Trips", "Average Travel Time", "Reroute count", "Experiment Seed #");
 		
-		excel.setOutputFile("C:\\Users\\Jay de Jesus\\git\\DTN-Traffic-Monitoring\\thesis\\reports\\DTN Traffic Monitoring\\all nodes(-slow nodes)\\E1\\" + 
-				getScenarioName() +"_Seed" +getSeed() + ".xls");
+		excel.setOutputFile(directory + getScenarioName() + ".xls");
+		
 		try {
 			excel.initialize(headers, hash);
 			int column;
@@ -100,11 +97,11 @@ public class TravelTimeReporter extends Report{
 				
 				averageTravelTime = averageTravelTime/hash.get(h).size();
 				
-				excel.addCaption(excel.getExcelSheet(), column++, row, h.toString());
+				excel.addLabel(excel.getExcelSheet(), column++, row, h.toString());
 				excel.addNumber(excel.getExcelSheet(), column++, row, totalTrips);
 				excel.addDouble(excel.getExcelSheet(), column++, row, averageTravelTime);
 				excel.addNumber(excel.getExcelSheet(), column++, row, totalRerouteCount);
-				excel.addNumber(excel.getExcelSheet(), column, row++, getSeed());
+				excel.addNumber(excel.getExcelSheet(), column++, row, getSeed());
 				row++;
 				write(h + "'s Average Travel Time: " + averageTravelTime + "\n");
 			}
@@ -113,6 +110,8 @@ public class TravelTimeReporter extends Report{
 		} catch (WriteException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (BiffException e) {
 			e.printStackTrace();
 		}
 	}

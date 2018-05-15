@@ -22,7 +22,7 @@ Group1.speed = 8.0, 11.0
 Group1.nrofHosts = 30
 Group1.groupID = m
 Group1.pois = 1, 1.0
-Group1.application1 = trafficAppT
+Group1.application1 = trafficAppF
 
 Group2.speed = 0.3, 0.5
 Group2.nrofHosts = 10
@@ -46,7 +46,7 @@ Group5.speed = 8.0, 11.0
 Group5.nrofHosts = 30
 Group5.groupID = m
 Group5.pois = 2, 1.0
-Group5.application1 = trafficAppT
+Group5.application1 = trafficAppF
 
 Group6.speed = 8.0, 11.0
 Group6.nrofHosts = 10

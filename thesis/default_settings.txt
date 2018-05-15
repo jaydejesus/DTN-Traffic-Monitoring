@@ -3,12 +3,12 @@
 #
 
 ## Scenario settings
-Scenario.name = Experiment1(TrafficApp)_Seed-%%MovementModel.rngSeed%% 
-#Scenario.name = Experiment1(No TrafficApp)
+#Scenario.name = Experiment1(TrafficApp)_Seed-%%MovementModel.rngSeed%% 
+Scenario.name = Experiment1(No TrafficApp)
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
-Scenario.endTime = 1800
+Scenario.endTime = 1000
 Scenario.nrofHostGroups = 6
 
 
