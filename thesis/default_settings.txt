@@ -3,7 +3,8 @@
 #
 
 ## Scenario settings
-Scenario.name = Experiment1(No TrafficApp)_S1
+Scenario.name = Experiment1(TrafficApp)_Seed-%%MovementModel.rngSeed%% 
+#Scenario.name = Experiment1(No TrafficApp)
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
@@ -102,7 +103,7 @@ Group6.pois = 2, 1.0
 ##TRIAL MOVEMENTMODEL AND MAP
 ## Movement model settings
 # seed for movement models' pseudo random number generator (default = 0)
-MovementModel.rngSeed = 1
+MovementModel.rngSeed = [1; 2; 3; 4; 5]
 # World's size for Movement Models without implicit size (width, height; meters)
 MovementModel.worldSize = 4500, 3400
 # How long time to move hosts in the world before real simulation

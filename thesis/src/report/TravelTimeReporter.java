@@ -1,18 +1,32 @@
 package report;
 
-import java.util.List;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.TreeMap;
 
 import core.DTNHost;
+import core.Settings;
 import core.SimScenario;
 import core.TripProperties;
+import jxl.read.biff.BiffException;
+import jxl.write.WriteException;
+import movement.MovementModel;
 import movement.Path;
 
 public class TravelTimeReporter extends Report{
-	private static HashMap<DTNHost, List<TripProperties>> hash = new HashMap<DTNHost, List<TripProperties>>();
+	private static final String directory = "";
+	private String fileName = "E1_NO_APP_";
+	private String seedNo;
+//	private static int row = 1;
+	private static TreeMap<DTNHost, List<TripProperties>> hash = new TreeMap<DTNHost, List<TripProperties>>();
 	private static List<String> list = new ArrayList<String>();
 	private static List<String> list2 = new ArrayList<String>();
+	
+	private WriteExcel excel = new WriteExcel();
+	private static List<String> headers = new ArrayList<String>();
 	
 	public void createReport(DTNHost host, TripProperties trip) {
 		String from = "" + trip.getTripStart();
@@ -30,10 +44,8 @@ public class TravelTimeReporter extends Report{
 			tripList.add(trip);
 			hash.put(host, tripList);
 		}
-		//if host is already stored in hash
 		else {
 			tripList = hash.get(host);
-//			if(tripList.contains(trip))
 			tripList.add(trip);
 			hash.put(host, tripList);
 		}
@@ -48,25 +60,9 @@ public class TravelTimeReporter extends Report{
 		list2.add(str);
 	}
 	
-	public void done() {
-//		System.out.println("Writing traffic reports");
-//		write("traffic reports:");
-//		for(String s : list) {
-//			write(s);
-//		}
-//		String str = "Experiment Name: " + SimScenario.getInstance().getName() + "\n" + 
-//				"Experiment duration: " + SimScenario.getInstance().getEndTime() + " seconds \n" + 
-//				"Total number of nodes: " + SimScenario.getInstance().getHosts().size() + "\n" + 
-//				"Number of slow nodes: " + getSettings().getSetting(SimScenario.GROUP_ID_S);
-//		write(str);
-		
-		System.out.println("Writing reroute reports");
-		write("reroute reports:");
-		for(String s : list2) {
-			write(s + "\n");
-		}
-		write("\n");
-		write("record of trips per node: ");
+	
+	public void createReport() {
+		write("record of trips per node: " + hash.keySet().size() + " nodes");
 		for(DTNHost h : hash.keySet()) {
 			double averageTravelTime = 0;
 			write(h + " trips: " + hash.get(h).size());
@@ -74,9 +70,77 @@ public class TravelTimeReporter extends Report{
 				averageTravelTime += t.getTravelTime();
 				write(t.toString());
 			}
-			write(h + "'s Average Travel Time: " + averageTravelTime/hash.get(h).size() + "\n");
-//			write("\n");
+			
+			averageTravelTime = averageTravelTime/hash.get(h).size();
+			write(h + "'s Average Travel Time: " + averageTravelTime + "\n");
 		}
+	}
+
+	public void excelize() {
+		Collections.addAll(headers, "Host", "Nr Of Trips", "Average Travel Time", "Reroute count", "Experiment Seed #");
+		
+		excel.setOutputFile("C:\\Users\\Jay de Jesus\\git\\DTN-Traffic-Monitoring\\thesis\\reports\\DTN Traffic Monitoring\\all nodes(-slow nodes)\\E1\\" + 
+				getScenarioName() +"_Seed" +getSeed() + ".xls");
+		try {
+			excel.initialize(headers, hash);
+			int column;
+			int row = excel.getExcelSheet().getRows();
+			for(DTNHost h : hash.keySet()) {
+				column = 0;
+	
+				double averageTravelTime = 0;
+				int totalTrips = hash.get(h).size();
+				int totalRerouteCount = 0;
+				write(h + " trips: " + hash.get(h).size());
+				for(TripProperties t : hash.get(h)) {
+					averageTravelTime += t.getTravelTime();
+					totalRerouteCount += t.getRerouteCtr();
+					write(t.toString());
+				}
+				
+				averageTravelTime = averageTravelTime/hash.get(h).size();
+				
+				excel.addCaption(excel.getExcelSheet(), column++, row, h.toString());
+				excel.addNumber(excel.getExcelSheet(), column++, row, totalTrips);
+				excel.addDouble(excel.getExcelSheet(), column++, row, averageTravelTime);
+				excel.addNumber(excel.getExcelSheet(), column++, row, totalRerouteCount);
+				excel.addNumber(excel.getExcelSheet(), column, row++, getSeed());
+				row++;
+				write(h + "'s Average Travel Time: " + averageTravelTime + "\n");
+			}
+			
+			excel.write();
+		} catch (WriteException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public int getSeed() {
+		Settings s = new Settings(MovementModel.MOVEMENT_MODEL_NS);
+		int seed = s.getInt(MovementModel.RNG_SEED);
+			
+		return seed;
+	}
+	
+	public String getScenarioName() {
+		Settings s = new Settings(SimScenario.SCENARIO_NS);
+		String name = s.getSetting(SimScenario.NAME_S);
+		
+		return name;
+	}
+	
+	public void done() {
+		write("reroute reports:");
+		for(String s : list2) {
+			write(s + "\n");
+		}
+		write("\n");
+		
+		createReport();
+		excelize();
+		
 		write("Done!");
 		super.done();
 	}
