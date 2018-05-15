@@ -108,7 +108,7 @@ public class WriteExcel {
         Label label;
         label = new Label(column, row, s, timesBoldUnderline);
         sheet.addCell(label);
-        System.out.println("added " + s);
+//        System.out.println("added " + s);
     }
 
     public void addNumber(WritableSheet sheet, int column, int row, Integer integer) throws WriteException, RowsExceededException {

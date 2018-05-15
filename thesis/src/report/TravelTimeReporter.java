@@ -58,7 +58,7 @@ public class TravelTimeReporter extends Report{
 	}
 	
 	
-	public void createReport() {
+	public void writeReport() {
 		write("record of trips per node: " + hash.keySet().size() + " nodes");
 		for(DTNHost h : hash.keySet()) {
 			double averageTravelTime = 0;
@@ -137,7 +137,7 @@ public class TravelTimeReporter extends Report{
 		}
 		write("\n");
 		
-		createReport();
+		writeReport();
 		excelize();
 		
 		write("Done!");
