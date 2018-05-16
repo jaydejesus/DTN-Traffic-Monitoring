@@ -91,15 +91,14 @@ public class TrafficApplication extends Application{
 	private HashMap<DTNHost, Message> msgsHash;
 	private HashMap<String, List<Message>> groupedMsgs;
 	private HashMap<String, RoadProperties> roadProperties;
-	private double averageRoadSpeed;
 	private List<Message> roadMsgs;
 		
-	private List<DTNHost> sameLaneNodes;
 	private List<Message> frontNodesMsgs;
 	private FastestPathFinder alternativePathFinder;
 	private int roadCapacity;
 	private String roadDensity = "";
 	private boolean passive = false;
+	private Message prevMsg = null;
 	
 	/** 
 	 * Creates a new ping application with the given settings.
@@ -148,7 +147,6 @@ public class TrafficApplication extends Application{
 		this.appMsgSize = a.getAppMsgSize();
 		this.rng = new Random(this.seed);
 		this.msgs_list = new ArrayList<Message>();
-		this.sameLaneNodes = new ArrayList<DTNHost>();
 		this.frontNodesMsgs = new ArrayList<Message>();
 		this.msgsHash = new HashMap<DTNHost, Message>();
 		this.groupedMsgs = new HashMap<String, List<Message>>();
@@ -170,7 +168,6 @@ public class TrafficApplication extends Application{
 	@Override
 	public Message handle(Message msg, DTNHost host) {
 		String type = (String)msg.getProperty(mTYPE);
-		String basis = "";
 		String trafficCondition = "";
 		try {
 			 if (type==null) return msg;
@@ -178,7 +175,6 @@ public class TrafficApplication extends Application{
 			 if(this.passive) {
 				 return msg;
 			 }
-//			 System.out.println(host + " is handling msgs");
 			 if (type.equalsIgnoreCase("traffic")) {
 					
 					if(!this.msgsHash.containsKey(msg.getFrom())) {
@@ -187,33 +183,21 @@ public class TrafficApplication extends Application{
 					else {
 						Message m = msgsHash.get(msg.getFrom());
 						if(msg.getCreationTime() > m.getCreationTime()) {
+							host.deleteMessage(m.getId(), false);
 							msgsHash.put(msg.getFrom(), msg);
 						}
 					}
 
 					groupMsgsByRoad(msgsHash, host);
-					updateGroupedMsgs(this.groupedMsgs, host);
-					//computes average speeds of all known roads, if road is your current road, average speed is based on front nodes
+//					updateGroupedMsgs(this.groupedMsgs, host);
 					computeAverageSpeedPerRoad(this.groupedMsgs, host);
-					//computes average speeds of all known roads
-//					computeAverageSpeedPerRoadV2(this.groupedMsgs, host);
-//					trafficCondition = getRoadTrafficConditions(this.roadProperties, host);
 					getRoadTrafficConditions(this.roadProperties, host);
 					trafficCondition = this.roadProperties.get(host.getCurrentRoad().getRoadName()).getCondition();
-//					System.out.println(host + " current road: " + host.getCurrentRoad().getRoadName() + " " + trafficCondition);
-//					for(String key : this.roadProperties.keySet()) {
-//						System.out.println(key + " " + this.roadProperties.get(key).getCondition());
-//					}
 					
 					super.sendEventToListeners("TrafficReport", host.getCurrentRoad(), trafficCondition, SimClock.getTime(), 
 							this.roadProperties, host.getPath(), null, host);
 
 					if(trafficCondition == TRAFFIC_JAM) {
-//						System.out.println(host + " MUST REROUTE!!!!!");
-//						System.out.println(host + " current path upon knowing traffic: " + host.getPath().getCoords());
-//						System.out.println(host + " current location: " + host.getLocation() + " at " + host.getCurrentRoad().getRoadName() + " distance to currDest: " + 
-//								host.getLocation().distance(host.getCurrentDestination()) + " speed: " + host.getCurrentSpeed());
-						
 						if(host.getPathDestination() != null) {
 							getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
 									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
@@ -222,11 +206,6 @@ public class TrafficApplication extends Application{
 									this.roadProperties, host.getPath(), null, host);
 						}
 					}
-//					if(this.neededMsgs.size() < 1)
-//						basis = " based on own speed ";
-//					else
-//						basis = " based on " + this.neededMsgs.size() + " same lane nodes ";
-//					
 				}				
 		 }catch(Exception e) {	
 			 e.printStackTrace();
@@ -273,31 +252,30 @@ public class TrafficApplication extends Application{
 	//removes data of all known roads with respect to its freshness
 	//fresh messages (not greater than 10 seconds ago) are still considered, else it is discarded
 	public void updateGroupedMsgs(HashMap<String, List<Message>> hash, DTNHost host) {
-		List<Message> toDelete = new ArrayList<Message>();
 		
 		for(String key : hash.keySet()) {
 			Iterator<Message> iterator = hash.get(key).iterator();
 			while(iterator.hasNext()) {
 				Message m = iterator.next();
 				if((SimClock.getTime() - m.getCreationTime()) > FRESHNESS) {
-//					if(host.getRouter().hasMessage(m.getId()))
-//						host.deleteMessage(m.getId(), false);
+				
 //					if(!toDelete.contains(m))
 //						toDelete.add(m);
+					if(host.toString().equals("m4"))
+						System.out.println(host + " to delete msg " + m + " " + m.getCreationTime());
 					iterator.remove();
-					
+					if(host.getRouter().hasMessage(m.getId()))
+						host.deleteMessage(m.getId(), false);
 				}
 			}
 		}
+		if(host.toString().equals("m4")) {
+			System.out.println("hash " + hash.values().size() + " : " + hash.values());
+			System.out.println("coll " + host.getMessageCollection().size() + " : " + host.getMessageCollection());
+		}
 		
-//		for(Message m : toDelete) {
-//			if(host.getRouter().hasMessage(m.getId())) {
-//				System.out.println(host + " has deleted " + m.getId() + " from buffer");
-////				host.deleteMessage(m.getId(), false);
-//				host.getRouter().deleteMessage(m.getId(), false);
-//			}
-//		}
-//		System.out.println(host + " " + host.getMessageCollection());
+//		if(host.toString().equals("m4"))
+//			System.out.println(host.getMessageCollection());
 	}
 
 	//returns list of msgs from host's front nodes
@@ -341,26 +319,13 @@ public class TrafficApplication extends Application{
 				
 				//if an key equal ha road han host
 				if(key.equals(host.getCurrentRoad().getRoadName())) {
-					
-//						System.out.println(host + " computing average of " + getMyFrontNodes(this.groupedMsgs, host));
-						//kanan tanan na hosts ha same na lane
-						//for(Message m : this.groupedMsgs.get(host.getCurrentRoad().getRoadName())) {
-						//kanan tanan na hosts na ada ha front tapos same na lane
-						for(Message m : getMyFrontNodes(this.groupedMsgs, host)) {
-							average = average + (double) m.getProperty(mSPEED);
-							ctr++;
-						}
-						average = average/ctr;
-//						if(average >= 8.0)
-//							condition = FREE_FLOW;
-//						else if(average <= 1.0)
-//							condition = TRAFFIC_JAM;
-//						else
-//							condition = MEDIUM_FLOW;
-						rps = new RoadProperties(key, average, ctr, condition);
-						this.roadProperties.put(key, rps);
-//					}
-					
+					for(Message m : getMyFrontNodes(this.groupedMsgs, host)) {
+						average = average + (double) m.getProperty(mSPEED);
+						ctr++;
+					}
+					average = average/ctr;
+					rps = new RoadProperties(key, average, ctr, condition);
+					this.roadProperties.put(key, rps);
 				}
 				
 				//if an key diri same ha road han host
@@ -372,65 +337,13 @@ public class TrafficApplication extends Application{
 						ctr++;
 					}
 					average = average/ctr;
-//					if(average >= 8.0)
-//						condition = FREE_FLOW;
-//					else if(average <= 1.0)
-//						condition = TRAFFIC_JAM;
-//					else
-//						condition = MEDIUM_FLOW;
 					rps = new RoadProperties(key, average, ctr, condition);
 					this.roadProperties.put(key, rps);
 				}
-//				System.out.println(host + " evaluation: " + this.roadProperties.get(key).getRoadName() + ": "  +this.roadProperties.get(key).getAverageSpeedOfRoad() 
-//						+ " , " + this.roadProperties.get(key).getRoadDensity());
 			}
 		}
 		
 	}
-	
-	public void computeAverageSpeedPerRoadV2(HashMap<String, List<Message>> hash, DTNHost host) {
-		double NaN = -1.0;
-		String condition = "";
-		
-		if(!hash.containsKey(host.getCurrentRoad().getRoadName())) {
-			RoadProperties rps = new RoadProperties(host.getCurrentRoad().getRoadName(), host.getCurrentSpeed(), 1, condition);
-			this.roadProperties.put(host.getCurrentRoad().getRoadName(), rps);
-		}
-		for(String key : hash.keySet()) {
-			RoadProperties rps;
-	
-			if(hash.get(key).isEmpty()) {
-//				condition = FREE_FLOW;
-				rps = new RoadProperties(key, NaN, 0, condition);
-				this.roadProperties.put(key, rps);
-			}
-			//if hash has a value for the key
-			else {
-				Iterator<Message> iterator = hash.get(key).iterator();
-				double average = 0;
-				int ctr = 0;
-				while(iterator.hasNext()) {
-					Message m = iterator.next();
-					double s = (double) m.getProperty(mSPEED);
-					average = average + s;
-					ctr++;
-				}
-				average = average/ctr;
-//				if(average >= 8.0)
-//					condition = FREE_FLOW;
-//				else if(average <= 1.0)
-//					condition = TRAFFIC_JAM;
-//				else
-//					condition = MEDIUM_FLOW;
-				rps = new RoadProperties(key, average, ctr, condition);
-				this.roadProperties.put(key, rps);
-			}
-//				System.out.println(host + " evaluation: " + this.roadProperties.get(key).getRoadName() + ": "  +this.roadProperties.get(key).getAverageSpeedOfRoad() 
-//						+ " , " + this.roadProperties.get(key).getRoadDensity());
-		}
-		
-	}
-
 	
 	//an local road traffic condition awareness kay dapat based la han iya knowledge about han mga front nodes
 	//so an average speed ngan density, based la ghap ha mga front nodes
@@ -444,14 +357,6 @@ public class TrafficApplication extends Application{
 	public void getRoadTrafficConditions(HashMap<String, RoadProperties> hash, DTNHost host) {
 		double ave_speed;
 		int density;
-//		if(hash.containsKey(host.getCurrentRoad().getRoadName()) && hash.get(host.getCurrentRoad().getRoadName()) == null) {
-//			ave_speed = hash.get(host.getCurrentRoad().getRoadName()).getAverageSpeedOfRoad();
-//			density  = hash.get(host.getCurrentRoad().getRoadName()).getRoadDensity();
-//		}
-//		else {
-//			ave_speed = host.getCurrentSpeed();
-//			density = 1;
-//		}
 		
 		for(String key : hash.keySet()) {
 			ave_speed = hash.get(key).getAverageSpeedOfRoad();
@@ -466,7 +371,6 @@ public class TrafficApplication extends Application{
 			else if(ave_speed <= 1.0) {
 				if(getRoadDensity(host.getCurrentRoad(), density).equals(HIGH)) {
 					this.currentRoadCondition = TRAFFIC_JAM;
-//					System.out.println(host + " Traffic on road " + host.getCurrentRoad().getRoadName() + " myLoc: " + host.getLocation());
 				}
 				else if(getRoadDensity(host.getCurrentRoad(), density).equals(MEDIUM))
 					this.currentRoadCondition = MEDIUM_FLOW;
@@ -484,62 +388,21 @@ public class TrafficApplication extends Application{
 			r.setCondition(this.currentRoadCondition);
 			hash.put(key, r);
 		}
-//				
-//		System.out.println(host + " road condition: " + hash.get(host.getCurrentRoad().getRoadName()).getCondition());
-//		System.out.println("===============================================================================================");
-//		return hash.get(host.getCurrentRoad().getRoadName()).getCondition();
 	}
-	
-	private double getAverageRoadSpeed(List<Message> msgs, DTNHost host) {
-		this.averageRoadSpeed = host.getCurrentSpeed();
-		int nrofhosts = 1;
-
-//		System.out.println(host + " is commputing ave spd of " + msgs.size() + " same lane nodes");
-		
-		for(Message m : msgs) {
-			double spd = (double) m.getProperty(mSPEED);
-//			System.out.println(host + " is adding " + m + " of " + m.getFrom() + ": spd=" + spd + " m.speed=" + (double) m.getProperty(mSPEED));
-			
-			this.averageRoadSpeed += spd;
-			nrofhosts++;
-		}
-//		System.out.println(host + " ave road spd: " + this.averageRoadSpeed/(double)nrofhosts + " nrofsamelanenodes: " + (nrofhosts > 1 ? nrofhosts : 0));
-		if(nrofhosts > 0)
-			this.averageRoadSpeed = this.averageRoadSpeed/(double)nrofhosts;
-		else
-			this.averageRoadSpeed = host.getCurrentSpeed();
-		
-		return this.averageRoadSpeed;
-	}
-	
-	private double getAverageFrontNodeDistance(List<Message> msgs, DTNHost host) {
-		double averageFrontDistance = 0;
-		double frontDistance;
-		for(Message m : msgs) {
-			frontDistance = (double) m.getProperty(mDISTANCE_TO_FRONTNODE);
-			averageFrontDistance = averageFrontDistance + frontDistance;
-		}
-//		System.out.println(host + " same lane average front distance " + msgs.size() + ": " + averageFrontDistance);
-		return (double)averageFrontDistance/msgs.size();
-	}
-
 	
 	public List<Message> filterFrontNodes(List<Message> msgs, DTNHost host){
 		this.frontNodesMsgs.clear();
 		for(Message m : msgs) {
 			DTNHost h = m.getFrom();
 			if(h.getLocation().distance(h.getCurrentDestination()) < host.getLocation().distance(host.getCurrentDestination())) {
-//				System.out.print(" " + h);
 				this.frontNodesMsgs.add(m);
 			}
 		}
-//		System.out.println();
 		return this.frontNodesMsgs;
 	}
 	
 	public int getRoadCapacity(Road r) {
 		this.roadCapacity =(int) (((Coord)r.getStartpoint()).distance((Coord)r.getEndpoint()) / VEHICLE_SIZE);
-//		System.out.println(this.roadCapacity);
 		return this.roadCapacity;
 	}
 	
@@ -553,43 +416,6 @@ public class TrafficApplication extends Application{
 			this.roadDensity = MEDIUM;
 		
 		return this.roadDensity;
-	}
-	
-	//changed msgs to consider for local average speed computation. only frontNodes will be considered
-	//change paramater to HashMap<String, Double(for averagespeed>, Double(for trafficdensity)>
-	public String getTrafficCondition(List<Message> msgs, DTNHost host) {
-		double ave_speed = getAverageRoadSpeed(filterFrontNodes(msgs, host), host);
-//		double ave_speed = hash.get(host.getCurrentRoad().getRoadName());
-		
-		if(ave_speed >= 8.0) {
-//			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(HIGH))
-//				this.currentRoadCondition = MEDIUM_FLOW;
-//			else
-				this.currentRoadCondition = FREE_FLOW;
-		}
-		else if(ave_speed <= 0.5) {
-			this.currentRoadCondition = TRAFFIC_JAM;
-//			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(HIGH)) {
-//				this.currentRoadCondition = TRAFFIC_JAM;
-//				System.out.println(host + " path===" + host.getPath());
-//				System.out.println("Traffic on road " + host.getCurrentRoad().getRoadName());
-//			}
-//			else if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(MEDIUM))
-//				this.currentRoadCondition = MEDIUM_FLOW;
-//			else {
-//				this.currentRoadCondition = FREE_FLOW;
-//			}
-		}
-		else {
-//			if(getRoadDensity(host.getCurrentRoad(), msgs.size()).equals(LOW))
-//				this.currentRoadCondition = FREE_FLOW;
-//			else
-				this.currentRoadCondition = MEDIUM_FLOW;
-		}
-				
-//		System.out.println(host + " road condition: " + this.currentRoadCondition + " ------------" + SimClock.getTime());
-//		System.out.println("===============================================================================================");
-		return this.currentRoadCondition;
 	}
 
 	/** 
@@ -614,6 +440,9 @@ public class TrafficApplication extends Application{
 
 	@Override
 	public void update(DTNHost host) {
+		
+		updateGroupedMsgs(this.groupedMsgs, host);
+		
 		double curTime = SimClock.getTime();
 //		System.out.println(host + " current trip : " + host.getCurrentTrip().toString() + " TravelTime: " + host.getTravelTime());
 		try {
@@ -632,7 +461,12 @@ public class TrafficApplication extends Application{
 				m.addProperty(mDISTANCE_TO_FRONTNODE, host.getLocation().distance(host.getFrontNode(host.getSameLaneNodes()).getLocation()));
 
 				m.setAppID(APP_ID);
+				
+				if(prevMsg != null)
+					host.deleteMessage(prevMsg.getId(), false);
+				
 				host.createNewMessage(m);
+				prevMsg = m;
 
 				this.lastAppUpdate = curTime;
 			}
@@ -641,16 +475,12 @@ public class TrafficApplication extends Application{
 		}
 	}
 
-	private List<DTNHost> getSameLaneNodes() {
-		return this.sameLaneNodes;
-	}
-
 	//version 2 of finding reroute path (messages received from other hosts are now considered
 	private void getAlternativePathV2(Coord previousDestination, Coord currentDestination, Coord pathDestination,
 			List<Coord> subpath, DTNHost host, double currentSpeed, double pathSpeed,
 			HashMap<String, RoadProperties> roadProperties) {
 		
-//		System.out.println(host + " current path before pathfinding: " + host.getPath().getCoords());
+
 		Path p;
 		this.alternativePathFinder = new FastestPathFinder(host.getMovementModel().getOkMapNodeTypes2());
 		
@@ -660,28 +490,14 @@ public class TrafficApplication extends Application{
 		List<MapNode> altMapNodes = new ArrayList<MapNode>();
 		altMapNodes = this.alternativePathFinder.getAlternativePathV2(s, currentDest, dest, host.getLocation(), currentSpeed, pathSpeed, subpath, roadProperties);
 		
-//		System.out.println(altMapNodes);
 		if(altMapNodes == null)
 			p = null;
-//			System.out.println("Path finder couldn't suggest faster routes. Sticking to current path.");
 		else {
-//			System.out.println("Found new path: " + altMapNodes);
-//			System.out.println("re: path= " + this.alternativePathFinder.getAlternativePath(s, dest, host.getLocation(), path, host.getCurrentSpeed()));
-//			System.out.println("Getting reroute path");
-			
-			//FIX NEEDED IN HERE
-			//pass by reference ada ini hiya nga part na pagtawag han altMapNodes asya nagkakalurong
 			p = new Path(pathSpeed);
 			for(MapNode n : altMapNodes) {
 				p.addWaypoint(n.getLocation());
-//				System.out.println("MapNode " + n);
 			}
-
-//			System.out.println("New path for host: " + p);
-//			System.out.println("in app: " + p);
-//			System.out.println("called host reroute for " + host);
 			host.reroute(p);
-//			System.out.println("done calling host reroute=================================");
 		}
 	}
 	

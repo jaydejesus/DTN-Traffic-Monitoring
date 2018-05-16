@@ -16,7 +16,7 @@ import movement.MovementModel;
 import movement.Path;
 
 public class TravelTimeReporter extends Report{
-	private static final String directory = "/home/jaydejesus/git/dtn-traffic-monitoring/thesis/reports/DTN Traffic Monitoring/all nodes(-slow nodes)/";
+	private static final String directory = "/home/jaydejesus/git/dtn-traffic-monitoring/thesis/reports/";
 //	private static int row = 1;
 	private static TreeMap<DTNHost, List<TripProperties>> hash = new TreeMap<DTNHost, List<TripProperties>>();
 	private static List<String> list = new ArrayList<String>();
