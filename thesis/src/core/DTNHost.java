@@ -48,8 +48,9 @@ public class DTNHost implements Comparable<DTNHost> {
 	private Road currentRoad;
 	private List<DTNHost> otherNodesOnRoad;
 	private List<DTNHost> oppositeLane;
-	private List<String> pathRoads; 
-	private HashMap<String, Road> roads;
+//	private List<String> pathRoads; 
+//	private HashMap<String, Road> roads;
+	private List<Road> subPathRoads;
 	private boolean canOvertakeStatus;
 	private int pathIndex;
 
@@ -63,8 +64,8 @@ public class DTNHost implements Comparable<DTNHost> {
 	private int tripCtr = 0;
 	private int rerouteCtr;
 	private double tripTravelDistance;
-	private HashMap<Integer, TripProperties> trips;
-	private static TravelTimeReporter travelTimeReporter;
+//	private HashMap<Integer, TripProperties> trips;
+	private TravelTimeReporter travelTimeReporter;
 	private boolean reported = false;
 	
 	
@@ -126,10 +127,11 @@ public class DTNHost implements Comparable<DTNHost> {
 		this.subpath = null;
 		this.otherNodesOnRoad = new ArrayList<DTNHost>();
 		this.oppositeLane = new ArrayList<DTNHost>();
-		this.pathRoads = new ArrayList<String>();
-		this.roads = new HashMap<String, Road>();
+//		this.pathRoads = new ArrayList<String>();
+//		this.roads = new HashMap<String, Road>();
+		this.subPathRoads = new ArrayList<Road>();
 		this.subpath = new ArrayList<Coord>();
-		this.trips = new HashMap<Integer, TripProperties>();
+//		this.trips = new HashMap<Integer, TripProperties>();
 		this.travelTimeReporter = new TravelTimeReporter();
 		
 		if (movLs != null) { // inform movement listeners about the location
@@ -566,9 +568,11 @@ public class DTNHost implements Comparable<DTNHost> {
 		this.subpath = this.path.getSubpath(path.getWaypointIndex()-1, path.getPathSize());
 		this.pathIndex = this.path.getWaypointIndex();
 		getRoadsAhead();
-//		System.out.println(this + " : " + this.path.getCoords());
-//		System.out.println(this + "'s subpath : " + getSubpath());
-		
+		if(this.toString().equals("m0")) {
+			System.out.println(this + " : " + this.path.getCoords());
+			System.out.println(this + "'s subpath : " + getSubpath());
+//			System.out.println(this + " " + getRoadsAhead());
+		}
 		if(this.prevDestination != this.destination) {
 			String roadName = "[" + this.prevDestination + ", " + this.destination + "]";
 			this.currentRoad = new Road(roadName, this.prevDestination, this.destination);
@@ -815,11 +819,6 @@ public class DTNHost implements Comparable<DTNHost> {
 		return false;
 	}
 	
-//	public void slowDown(double tempSpeed) {
-//		if(!this.toString().startsWith("s"))
-//			this.speed = tempSpeed;
-//	}
-	
 	public void slowDown(DTNHost front) {
 		double spd = this.speed - (this.speed * 0.25);
 		
@@ -829,7 +828,6 @@ public class DTNHost implements Comparable<DTNHost> {
 		if(spd < front.getCurrentSpeed() && front.getCurrentSpeed() >= 0.3 && front.getCurrentSpeed() <= 0.5) {
 			this.speed = front.getCurrentSpeed();
 		}
-//		System.out.println(this + " is slowing down " + this.speed);
 	}
 	
 	public void overtake() {
@@ -842,7 +840,6 @@ public class DTNHost implements Comparable<DTNHost> {
 			}catch(Exception e) {
 				
 			}
-//			System.out.println(this + " is overtaking " + this.speed);
 		}
 	}
 	
@@ -881,8 +878,8 @@ public class DTNHost implements Comparable<DTNHost> {
 		return null;
 	}
 
-	public void getRoadsAhead() {
-		this.pathRoads.clear();
+	public List<Road> getRoadsAhead() {
+		this.subPathRoads.clear();
 		
 		List<Coord> s = getSubpath();
 		String roadName;
@@ -890,10 +887,12 @@ public class DTNHost implements Comparable<DTNHost> {
 			for(int i = 0; i < s.size()-1; i++) {
 				roadName = "[" + s.get(i) + ", " + s.get(i+1) +"]";
 				Road r = new Road(roadName, s.get(i), s.get(i+1));
-				this.pathRoads.add((String) r.getRoadName());
-				this.roads.put(roadName, r);
+				this.subPathRoads.add(r);
+//				this.roads.put(roadName, r);
+//				System.out.println(r.getRoadName());
 			}
 		}
+		return this.subPathRoads;
 //		System.out.println(this + "'s road/s ahead: " + this.pathRoads);
 	}
 	
@@ -915,7 +914,7 @@ public class DTNHost implements Comparable<DTNHost> {
 			this.path = p;
 			this.speed = p.getSpeed();
 			rerouteCtr++;
-			if(this.getGroupId().equals("n"))
+//			if(this.getGroupId().equals("n"))
 				this.travelTimeReporter.rerouteReport(this, this.path, SimClock.getTime());
 		}
 //		this.prevDestination = this.destination;

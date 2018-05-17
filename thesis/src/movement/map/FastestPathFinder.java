@@ -37,7 +37,9 @@ public class FastestPathFinder {
 	private Map<MapNode, MapNode> prevNodes;
 
 	private int [] okMapNodes;
-
+	
+//	private List<MapNode> path;
+	
 	/**
 	 * Constructor.
 	 * @param okMapNodes The map node types that are OK for paths or null if
@@ -65,6 +67,7 @@ public class FastestPathFinder {
 		// set traveltime to source 0 and initialize unvisited queue
 		this.travelTimes.put(node, 0);
 		this.unvisited.add(node);
+//		this.path = new LinkedList<MapNode>();
 	}
 	/**
 	 * Relaxes the neighbors of a node (updates the shortest travelTimes).
@@ -165,69 +168,12 @@ public class FastestPathFinder {
 	 * @param contPathCoords The coordinates ahead of the current path 
 	 * @return Resulting fastest route based on algorithm calculation/estimation 
 	 */
-	public List<MapNode> getAlternativePath(MapNode prevDest, MapNode currDest, MapNode finalDest, Coord currLocation, double slowSpeed, 
-			double pathSpeed, List<Coord> contPathCoords) {
-		List<MapNode> path = new LinkedList<MapNode>();
-
-		double rerouteTravTime = currLocation.distance(prevDest.getLocation())/pathSpeed;
-		double currentPathTravTime = currLocation.distance(currDest.getLocation())/slowSpeed;
-		
-		if (prevDest.compareTo(finalDest) == 0) { // source and destination are the same
-			path.add(prevDest); // return a list containing only source node
-			return path;
-		}
-
-		initWith(prevDest);
-		MapNode node = null;
-
-		// always take the node with shortest distance
-		while ((node = unvisited.poll()) != null) {
-			if (node == finalDest) {
-				break; // we found the destination -> no need to search further
-			}
-
-			visited.add(node); // mark the node as visited
-			relax(node, prevDest, currDest, pathSpeed); // add/update neighbor nodes' travelTimes
-		}
-
-		// now we either have the path or such path wasn't available
-		if (node == finalDest) { // found a path
-			path.add(0,finalDest);
-			MapNode prev = prevNodes.get(finalDest);
-			while (prev != prevDest) {
-				path.add(0, prev);	// always put previous node to beginning
-				prev = prevNodes.get(prev);
-			}
-
-			path.add(0, prevDest); // finally put the source node to first node
-		}
-		System.out.println("reroute path: " + path);
-		
-//		System.out.println("reroute path traveltime");
-		for(int i = 0; i < path.size()-1; i++) {
-			Coord c1 = path.get(i).getLocation();
-			Coord c2 = path.get(i+1).getLocation();
-//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/pathSpeed));
-			rerouteTravTime = rerouteTravTime + (c1.distance(c2)/pathSpeed);
-		}
-		System.out.println("reroute path total travel time : " + rerouteTravTime);
-//		System.out.println("current paaaath traveltimes");
-		for(int i = 0; i < contPathCoords.size()-1; i++) {
-			Coord c1 = contPathCoords.get(i);
-			Coord c2 = contPathCoords.get(i+1);
-//			System.out.println("from " + c1 + " to " + c2 + " : " + (c1.distance(c2)/pathSpeed));
-			currentPathTravTime = currentPathTravTime + (c1.distance(c2)/pathSpeed);
-		}
-		System.out.println("current path total travel time : " + currentPathTravTime);
-		if(rerouteTravTime > currentPathTravTime)
-			return null;
-		return path;
-	}
 	
 	//finding reroute path using the evaluated msgs as basis for travel speed 
 	public List<MapNode> getAlternativePathV2(MapNode s, MapNode currentDest, MapNode dest, Coord location,
 			double currentSpeed, double pathSpeed, List<Coord> subpath, HashMap<String, RoadProperties> roadProperties) {
 		List<MapNode> path = new LinkedList<MapNode>();
+//		path.clear();
 
 //		System.out.println("here in altpath");
 		double rerouteTravTime = location.distance(s.getLocation())/pathSpeed;

@@ -94,6 +94,7 @@ public class TrafficApplication extends Application{
 	private List<Message> roadMsgs;
 		
 	private List<Message> frontNodesMsgs;
+	private List<Message> list;
 	private FastestPathFinder alternativePathFinder;
 	private int roadCapacity;
 	private String roadDensity = "";
@@ -152,6 +153,7 @@ public class TrafficApplication extends Application{
 		this.groupedMsgs = new HashMap<String, List<Message>>();
 		this.roadMsgs = new ArrayList<Message>();
 		this.roadProperties = new HashMap<String, RoadProperties>();
+		this.list = new ArrayList<Message>();
 	}
 	
 	private boolean isPassive() {
@@ -183,7 +185,8 @@ public class TrafficApplication extends Application{
 					else {
 						Message m = msgsHash.get(msg.getFrom());
 						if(msg.getCreationTime() > m.getCreationTime()) {
-							host.deleteMessage(m.getId(), false);
+							if(host.getRouter().hasMessage(m.getId()))
+								host.deleteMessage(m.getId(), false);
 							msgsHash.put(msg.getFrom(), msg);
 						}
 					}
@@ -261,18 +264,18 @@ public class TrafficApplication extends Application{
 				
 //					if(!toDelete.contains(m))
 //						toDelete.add(m);
-					if(host.toString().equals("m4"))
-						System.out.println(host + " to delete msg " + m + " " + m.getCreationTime());
+//					if(host.toString().equals("m4"))
+//						System.out.println(host + " to delete msg " + m + " " + m.getCreationTime());
 					iterator.remove();
 					if(host.getRouter().hasMessage(m.getId()))
 						host.deleteMessage(m.getId(), false);
 				}
 			}
 		}
-		if(host.toString().equals("m4")) {
-			System.out.println("hash " + hash.values().size() + " : " + hash.values());
-			System.out.println("coll " + host.getMessageCollection().size() + " : " + host.getMessageCollection());
-		}
+//		if(host.toString().equals("m4")) {
+//			System.out.println("hash " + hash.values().size() + " : " + hash.values());
+//			System.out.println("coll " + host.getMessageCollection().size() + " : " + host.getMessageCollection());
+//		}
 		
 //		if(host.toString().equals("m4"))
 //			System.out.println(host.getMessageCollection());
@@ -280,7 +283,7 @@ public class TrafficApplication extends Application{
 
 	//returns list of msgs from host's front nodes
 	public List<Message> getMyFrontNodes(HashMap<String, List<Message>> hash, DTNHost host) {
-		List<Message> list = new ArrayList<Message>();
+		list.clear();
 		if(!hash.containsKey(host.getCurrentRoad().getRoadName()))
 			return null;
 		
@@ -462,7 +465,7 @@ public class TrafficApplication extends Application{
 
 				m.setAppID(APP_ID);
 				
-				if(prevMsg != null)
+				if(prevMsg != null && host.getRouter().hasMessage(prevMsg.getId()))
 					host.deleteMessage(prevMsg.getId(), false);
 				
 				host.createNewMessage(m);

@@ -476,7 +476,7 @@ public class TrafficApp extends Application{
 		MapNode currentDest = host.getMovementModel().getMap().getNodeByCoord(currentDestination);
 		MapNode dest = host.getMovementModel().getMap().getNodeByCoord(finalDestination);
 		List<MapNode> altMapNodes = new ArrayList<MapNode>();
-		altMapNodes = this.alternativePathFinder.getAlternativePath(s, currentDest, dest, host.getLocation(), slowSpeed, pathSpeed, path);
+//		altMapNodes = this.alternativePathFinder.getAlternativePath(s, currentDest, dest, host.getLocation(), slowSpeed, pathSpeed, path);
 		System.out.println("Orig path " + host.getPathSpeed());
 		if(altMapNodes == null)
 			System.out.println("Path finder couldn't suggest faster routes. Sticking to current path.");

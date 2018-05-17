@@ -19,37 +19,37 @@ trafficAppF.passive = false
 # Set Traffic Application app for all nodes
 Group.nrofApplications = 1
 Group1.speed = 8.0, 11.0
-Group1.nrofHosts = 5
+Group1.nrofHosts = 225
 Group1.groupID = m
 Group1.pois = 1, 1.0
 Group1.application1 = trafficAppF
 
 Group2.speed = 0.3, 0.5
-Group2.nrofHosts = 5
+Group2.nrofHosts = 50
 Group2.groupID = s
 Group2.pois = 1, 1.0
 Group2.application1 = trafficAppT
 
 Group3.speed = 8.0, 11.0
-Group3.nrofHosts = 10
+Group3.nrofHosts = 225
 Group3.groupID = n
 Group3.pois = 1, 1.0
 Group3.application1 = trafficAppF
 
 Group4.speed = 0.3, 0.5
-Group4.nrofHosts = 5
+Group4.nrofHosts = 50
 Group4.groupID = s
 Group4.pois = 2, 1.0
 Group4.application1 = trafficAppT
 
 Group5.speed = 8.0, 11.0
-Group5.nrofHosts = 5
+Group5.nrofHosts = 225
 Group5.groupID = m
 Group5.pois = 2, 1.0
 Group5.application1 = trafficAppF
 
 Group6.speed = 8.0, 11.0
-Group6.nrofHosts = 5
+Group6.nrofHosts = 225
 Group6.groupID = n
 Group6.pois = 2, 1.0
 Group6.application1 = trafficAppF
@@ -60,3 +60,4 @@ Report.report1 = TravelTimeReporter
 Report.report2 = TrafficAppReporter
 Report.report3 = MessageStatsReport
 	
+
