@@ -568,11 +568,11 @@ public class DTNHost implements Comparable<DTNHost> {
 		this.subpath = this.path.getSubpath(path.getWaypointIndex()-1, path.getPathSize());
 		this.pathIndex = this.path.getWaypointIndex();
 		getRoadsAhead();
-		if(this.toString().equals("m0")) {
-			System.out.println(this + " : " + this.path.getCoords());
-			System.out.println(this + "'s subpath : " + getSubpath());
+//		if(this.toString().equals("m0")) {
+//			System.out.println(this + " : " + this.path.getCoords());
+//			System.out.println(this + "'s subpath : " + getSubpath());
 //			System.out.println(this + " " + getRoadsAhead());
-		}
+//		}
 		if(this.prevDestination != this.destination) {
 			String roadName = "[" + this.prevDestination + ", " + this.destination + "]";
 			this.currentRoad = new Road(roadName, this.prevDestination, this.destination);

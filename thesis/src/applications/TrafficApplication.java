@@ -171,6 +171,11 @@ public class TrafficApplication extends Application{
 	public Message handle(Message msg, DTNHost host) {
 		String type = (String)msg.getProperty(mTYPE);
 		String trafficCondition = "";
+		String trafficCondition1 = "";
+		String trafficCondition2 = "";
+		MapNode rerouteNode;
+		Coord reroutePoint;
+		
 		try {
 			 if (type==null) return msg;
 			 
@@ -196,18 +201,63 @@ public class TrafficApplication extends Application{
 					computeAverageSpeedPerRoad(this.groupedMsgs, host);
 					getRoadTrafficConditions(this.roadProperties, host);
 					trafficCondition = this.roadProperties.get(host.getCurrentRoad().getRoadName()).getCondition();
-					
 					super.sendEventToListeners("TrafficReport", host.getCurrentRoad(), trafficCondition, SimClock.getTime(), 
 							this.roadProperties, host.getPath(), null, host);
-
+					if(get1RoadAhead(host) != null) {
+						if(this.roadProperties.containsKey(get1RoadAhead(host)))
+							trafficCondition1 = this.roadProperties.get(get1RoadAhead(host).getRoadName()).getCondition();
+					}
+					
+					if(get2RoadsAhead(host) != null) {
+						if(this.roadProperties.containsKey(get2RoadsAhead(host)))
+							trafficCondition2 = this.roadProperties.get(get2RoadsAhead(host).getRoadName()).getCondition();
+					}
+					
 					if(trafficCondition == TRAFFIC_JAM) {
 						if(host.getPathDestination() != null) {
-							getAlternativePathV2(host.getPreviousDestination(), host.getCurrentDestination(), 
+							reroutePoint = host.getPreviousDestination();
+							getAlternativePathV2(reroutePoint, host.getCurrentDestination(), 
 									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
 							
 							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
 									this.roadProperties, host.getPath(), null, host);
 						}
+						System.out.println(host + "rerouted. current road traffic");
+					}
+					else if(trafficCondition1 == TRAFFIC_JAM) {
+						if(host.getPathDestination() != null) {
+							rerouteNode = host.getMovementModel().getMap().getNodeByCoord(host.getCurrentDestination());
+							if(rerouteNode.getNeighbors().size() > 2)
+								reroutePoint = host.getCurrentDestination();
+							else
+								reroutePoint = host.getPreviousDestination();
+							getAlternativePathV2(reroutePoint, host.getCurrentDestination(), 
+									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
+							
+							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
+									this.roadProperties, host.getPath(), null, host);
+						}
+						System.out.println(host + "rerouted. 1 road ahead traffic");
+					}
+					else if(trafficCondition2 == TRAFFIC_JAM) {
+						rerouteNode = host.getMovementModel().getMap().getNodeByCoord((Coord) get1RoadAhead(host).getStartpoint());
+						if(rerouteNode.getNeighbors().size() >= 2)
+							reroutePoint = host.getCurrentDestination();
+						else {
+//							rerouteNode = host.getMovementModel().getMap().getNodeByCoord((Coord) get2RoadsAhead(host).getStartpoint());
+//							if(rerouteNode.getNeighbors().size() > 2)
+//								reroutePoint = (Coord) get2RoadsAhead(host).getStartpoint();
+//							else
+							reroutePoint = host.getPreviousDestination();
+						}
+						if(host.getPathDestination() != null) {
+							getAlternativePathV2(reroutePoint, host.getCurrentDestination(), 
+									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
+							
+							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
+									this.roadProperties, host.getPath(), null, host);
+						}
+						System.out.println(host + "rerouted. 2 roads ahead traffic");
 					}
 				}				
 		 }catch(Exception e) {	
@@ -421,6 +471,22 @@ public class TrafficApplication extends Application{
 		return this.roadDensity;
 	}
 
+	public Road get1RoadAhead(DTNHost h) {
+		Road r = null;
+		if(!h.getRoadsAhead().isEmpty())
+			if(h.getRoadsAhead().size() >=1)
+				r = h.getRoadsAhead().get(0);
+		return r;
+	}
+	
+	public Road get2RoadsAhead(DTNHost h) {
+		Road r = null;
+		if(!h.getRoadsAhead().isEmpty())
+			if(h.getRoadsAhead().size() >=2)
+				r = h.getRoadsAhead().get(1);
+		return r;
+	}
+	
 	/** 
 	 * Draws a random host from the destination range
 	 * 
