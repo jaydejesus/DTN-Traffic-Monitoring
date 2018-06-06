@@ -294,7 +294,6 @@ public class TrafficApplication extends Application{
 	public void plotTrafficInfo(HashMap<String, RoadProperties> rps, DTNHost host) {
 		map = host.getMovementModel().getMap();
 		
-//		System.out.println(host + " " + map);
 	}
 	
 	//groups messages according to its senders' current road, messages from different senders that are in same road are
@@ -343,23 +342,12 @@ public class TrafficApplication extends Application{
 				Message m = iterator.next();
 				if((SimClock.getTime() - m.getCreationTime()) > FRESHNESS) {
 				
-//					if(!toDelete.contains(m))
-//						toDelete.add(m);
-//					if(host.toString().equals("m4"))
-//						System.out.println(host + " to delete msg " + m + " " + m.getCreationTime());
 					iterator.remove();
 					if(host.getRouter().hasMessage(m.getId()))
 						host.deleteMessage(m.getId(), false);
 				}
 			}
 		}
-//		if(host.toString().equals("m4")) {
-//			System.out.println("hash " + hash.values().size() + " : " + hash.values());
-//			System.out.println("coll " + host.getMessageCollection().size() + " : " + host.getMessageCollection());
-//		}
-		
-//		if(host.toString().equals("m4"))
-//			System.out.println(host.getMessageCollection());
 	}
 
 	//returns list of msgs from host's front nodes
