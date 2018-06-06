@@ -37,7 +37,7 @@ public class WriteExcel {
     	this.inputFile = inputFile;
     }
 
-    public void initialize(List<String> headers, TreeMap<DTNHost, List<TripProperties>> hash) throws IOException, WriteException, BiffException {
+    public void initialize(List<String> headers) throws IOException, WriteException, BiffException {
         file = new File(inputFile);
         wbSettings = new WorkbookSettings();
 

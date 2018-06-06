@@ -74,12 +74,12 @@ public class TravelTimeReporter extends Report{
 	}
 
 	public void makeExcel() {
-		Collections.addAll(headers, "Host", "Nr Of Trips", "Average Travel Time", "Reroute count", "Experiment Seed #");
+		Collections.addAll(headers, "Host", "Average Travel Time", "Nr Of Trips", "Reroute count", "Experiment Seed #");
 		
-		excel.setOutputFile(directory + getReportDir() + getScenarioName() + ".xls");
-		
+//		excel.setOutputFile(directory + getReportDir() + getScenarioName() + ".xls");
+		excel.setOutputFile(directory + getReportDir() + "AverageTravelTimeRecords.xls");
 		try {
-			excel.initialize(headers, hash);
+			excel.initialize(headers);
 			int column;
 			int row = excel.getExcelSheet().getRows();
 			for(DTNHost h : hash.keySet()) {

@@ -1,5 +1,10 @@
-Experiment 1 : With TrafficApplication
+Experiment 1 : 1 road with rerouting
+Goals:
+show that the traffic info generated using the collected data can be used for finding an alternative path in case of
+traffic congestion detection(use traffic app reporter to show this)
 
+show that the effect of the application is better compared to when there is no knowledge about the traffic conditions
+at all(use traveltimereporter to support this)
 NR_OF_SEEDS = 30 from [1, 30]
 SIMULATION_DURATION = 1800 seconds or 30 minutes
 NR_OF_NODE_GROUPS = 6

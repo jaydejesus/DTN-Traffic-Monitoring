@@ -1,5 +1,5 @@
-Experiment 1 : No TrafficApplication
-
+Experiment 4 : Span/Range Experiment 
+Goal: show that the app can gather data and analyze data to generate traffic information
 NR_OF_SEEDS = 30 from [1, 30]
 SIMULATION_DURATION = 1800 seconds or 30 minutes
 NR_OF_NODE_GROUPS = 6

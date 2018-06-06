@@ -902,14 +902,6 @@ public class DTNHost implements Comparable<DTNHost> {
 	}
 	
 	public void reroute(Path p) {
-//		System.out.println(this + " is now going to prev destination: " + p.getCoords().get(0));
-//		System.out.println("Setting reroute path of host: " + p);
-//		System.out.println("Subpath: " + this.getSubpath());
-//		System.out.println("Previous path: " + this.path);
-//		for(int i = this.pathIndex; i < this.path.getCoords().size(); i++) {
-//			p.addWaypoint(this.path.getCoords().get(i));
-//		}
-//		System.out.println("rerouted path: " + p);
 		if(p != null) {
 			this.path = p;
 			this.speed = p.getSpeed();

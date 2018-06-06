@@ -4,7 +4,7 @@
 
 ## Scenario settings
 #Scenario.name = Experiment1(TrafficApp)_Seed-%%MovementModel.rngSeed%% 
-Scenario.name = E2(With TrafficApp)
+Scenario.name = ReroutingTest(No TrafficApp)
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
@@ -44,12 +44,10 @@ wifiDirectInterface.transmitRange = 200
 # routeFile: route's file path - for MapRouteMovement
 # routeType: route's type - for MapRouteMovement
 
-#PointsOfInterest.poiFile1 = data/2pointsReverse.wkt
-#PointsOfInterest.poiFile2 = data/2points.wkt
+PointsOfInterest.poiFile1 = data/2pointsReverse.wkt
+PointsOfInterest.poiFile2 = data/2points.wkt
 #PointsOfInterest.poiFile1 = data/poi1.wkt
 #PointsOfInterest.poiFile2 = data/poi2.wkt
-PointsOfInterest.poiFile1 = data/exp2_pois_rev.wkt
-PointsOfInterest.poiFile2 = data/exp2_pois.wkt
 
 # Common settings for all groups
 Group.movementModel = ShortestPathMapBasedMovement
@@ -65,32 +63,32 @@ Group.waitTime = 0.0,0.0
 
 # Walking speeds
 Group1.speed = 8.0, 11.0
-Group1.nrofHosts = 100
+Group1.nrofHosts = 30
 Group1.groupID = m
 Group1.pois = 1, 1.0
 
 Group2.speed = 0.3, 0.5
-Group2.nrofHosts = 25
+Group2.nrofHosts = 10
 Group2.groupID = s
 Group2.pois = 1, 1.0
 
 Group3.speed = 8.0, 11.0
-Group3.nrofHosts = 125
+Group3.nrofHosts = 10
 Group3.groupID = n
 Group3.pois = 1, 1.0
 
 Group4.speed = 0.3, 0.5
-Group4.nrofHosts = 25
+Group4.nrofHosts = 10
 Group4.groupID = s
 Group4.pois = 2, 1.0
 
 Group5.speed = 8.0, 11.0
-Group5.nrofHosts = 100
+Group5.nrofHosts = 30
 Group5.groupID = m
 Group5.pois = 2, 1.0
 
 Group6.speed = 8.0, 11.0
-Group6.nrofHosts = 125
+Group6.nrofHosts = 10
 Group6.groupID = n
 Group6.pois = 2, 1.0
 
@@ -105,7 +103,8 @@ Group6.pois = 2, 1.0
 ##TRIAL MOVEMENTMODEL AND MAP
 ## Movement model settings
 # seed for movement models' pseudo random number generator (default = 0)
-MovementModel.rngSeed = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15; 16; 17; 18; 19; 20; 21; 22; 23; 24; 25; 26; 27; 28; 29; 30]
+MovementModel.rngSeed = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15; 16; 17; 18; 19; 20; 21; 22; 23; 24; 25; 26; 27; 28; 29; 30; 31; 32; 33; 34; 35]
+#MovementModel.rngSeed = 9
 # World's size for Movement Models without implicit size (width, height; meters)
 MovementModel.worldSize = 4500, 3400
 # How long time to move hosts in the world before real simulation
@@ -155,7 +154,7 @@ Events.nrof = 1
 ## Reports - all report names have to be valid report classes
 # how many reports to load
 Report.nrofReports = 3
-Report.reportDir = reports/DTN Traffic Monitoring/all nodes(-slow nodes)/E2/with app/
+Report.reportDir = reports/DTN Traffic Monitoring/trial runs/reroute screenshots/no app/
 # Report classes to load
 #Report.report1 = EventLogReport
 Report.report1 = TrafficAppReporter
@@ -167,4 +166,3 @@ Report.report3 = MessageStatsReport
 ## see World class for details.
 Optimization.cellSizeMult = 20
 Optimization.randomizeUpdateOrder = false
-

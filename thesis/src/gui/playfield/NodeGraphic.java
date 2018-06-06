@@ -134,6 +134,7 @@ public class NodeGraphic extends PlayFieldGraphic {
 			else {
 			g2.setColor(hostNameColor);
 			// Draw node's address next to it
+			if(node.toString().equals("n93"))
 			g2.drawString(node.toString(), scale(loc.getX()),
 					scale(loc.getY()));
 //			g2.drawString(node.toString() + " " + loc.toString(), scale(loc.getX()),

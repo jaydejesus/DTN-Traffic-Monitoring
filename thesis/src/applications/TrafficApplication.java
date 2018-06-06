@@ -23,6 +23,7 @@ import core.World;
 import movement.Path;
 import movement.map.FastestPathFinder;
 import movement.map.MapNode;
+import movement.map.SimMap;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -100,6 +101,7 @@ public class TrafficApplication extends Application{
 	private String roadDensity = "";
 	private boolean passive = false;
 	private Message prevMsg = null;
+	private SimMap map;
 	
 	/** 
 	 * Creates a new ping application with the given settings.
@@ -170,18 +172,18 @@ public class TrafficApplication extends Application{
 	@Override
 	public Message handle(Message msg, DTNHost host) {
 		String type = (String)msg.getProperty(mTYPE);
-		String trafficCondition = "";
-		String trafficCondition1 = "";
-		String trafficCondition2 = "";
+		String trafficCondition = null;
+		String trafficCondition1 = null;
+		String trafficCondition2 = null;
 		MapNode rerouteNode;
 		Coord reroutePoint;
 		
 		try {
 			 if (type==null) return msg;
 			 
-			 if(this.passive) {
-				 return msg;
-			 }
+//			 if(this.passive) {
+//				 return msg;
+//			 }
 			 if (type.equalsIgnoreCase("traffic")) {
 					
 					if(!this.msgsHash.containsKey(msg.getFrom())) {
@@ -201,30 +203,35 @@ public class TrafficApplication extends Application{
 					computeAverageSpeedPerRoad(this.groupedMsgs, host);
 					getRoadTrafficConditions(this.roadProperties, host);
 					trafficCondition = this.roadProperties.get(host.getCurrentRoad().getRoadName()).getCondition();
-					super.sendEventToListeners("TrafficReport", host.getCurrentRoad(), trafficCondition, SimClock.getTime(), 
-							this.roadProperties, host.getPath(), null, host);
+					
 					if(get1RoadAhead(host) != null) {
-						if(this.roadProperties.containsKey(get1RoadAhead(host)))
+						if(this.roadProperties.containsKey(get1RoadAhead(host).getRoadName()))
 							trafficCondition1 = this.roadProperties.get(get1RoadAhead(host).getRoadName()).getCondition();
 					}
 					
 					if(get2RoadsAhead(host) != null) {
-						if(this.roadProperties.containsKey(get2RoadsAhead(host)))
+						if(this.roadProperties.containsKey(get2RoadsAhead(host).getRoadName()))
 							trafficCondition2 = this.roadProperties.get(get2RoadsAhead(host).getRoadName()).getCondition();
 					}
-					
-					if(trafficCondition == TRAFFIC_JAM) {
+//
+//					if(!this.passive) {
+//						System.out.println(SimClock.getTime() + " " + host + " " + host.getCurrentRoad().getRoadName() + " : " + trafficCondition + getRoadCapacity(host.getCurrentRoad()));
+//						System.out.println(host + " 1 road ahead condition " + trafficCondition1);
+//						System.out.println(host + " 2 roads ahead condition " + trafficCondition2);
+//						System.out.println(SimClock.getTime() + " "  + trafficCondition + " " + trafficCondition1 + " " + trafficCondition2);
+//					}
+					if(trafficCondition == TRAFFIC_JAM && !this.passive) {
 						if(host.getPathDestination() != null) {
 							reroutePoint = host.getPreviousDestination();
 							getAlternativePathV2(reroutePoint, host.getCurrentDestination(), 
 									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
 							
-							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
-									this.roadProperties, host.getPath(), null, host);
+//							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
+//									this.roadProperties, host.getPath(), null, host);
 						}
-						System.out.println(host + "rerouted. current road traffic");
+//						System.out.println(SimClock.getTime() + " " + host + "rerouted. current road traffic" + trafficCondition + " " + trafficCondition1 + " " + trafficCondition2); 
 					}
-					else if(trafficCondition1 == TRAFFIC_JAM) {
+					else if(trafficCondition1 == TRAFFIC_JAM && !this.passive) {
 						if(host.getPathDestination() != null) {
 							rerouteNode = host.getMovementModel().getMap().getNodeByCoord(host.getCurrentDestination());
 							if(rerouteNode.getNeighbors().size() > 2)
@@ -234,12 +241,12 @@ public class TrafficApplication extends Application{
 							getAlternativePathV2(reroutePoint, host.getCurrentDestination(), 
 									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
 							
-							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
-									this.roadProperties, host.getPath(), null, host);
+//							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
+//									this.roadProperties, host.getPath(), null, host);
 						}
-						System.out.println(host + "rerouted. 1 road ahead traffic");
+//						System.out.println(SimClock.getTime() + " " + host + "rerouted. 1 road ahead traffic" + trafficCondition + " " + trafficCondition1 + " " + trafficCondition2);
 					}
-					else if(trafficCondition2 == TRAFFIC_JAM) {
+					else if(trafficCondition2 == TRAFFIC_JAM && !this.passive) {
 						rerouteNode = host.getMovementModel().getMap().getNodeByCoord((Coord) get1RoadAhead(host).getStartpoint());
 						if(rerouteNode.getNeighbors().size() >= 2)
 							reroutePoint = host.getCurrentDestination();
@@ -254,10 +261,10 @@ public class TrafficApplication extends Application{
 							getAlternativePathV2(reroutePoint, host.getCurrentDestination(), 
 									host.getPathDestination(), host.getSubpath(), host, host.getCurrentSpeed(), host.getPathSpeed(), this.roadProperties);
 							
-							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
-									this.roadProperties, host.getPath(), null, host);
+//							super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
+//									this.roadProperties, host.getPath(), null, host);
 						}
-						System.out.println(host + "rerouted. 2 roads ahead traffic");
+//						System.out.println(SimClock.getTime() + " " + host + "rerouted. 2 roads ahead traffic" + trafficCondition + " " + trafficCondition1 + " " + trafficCondition2);
 					}
 				}				
 		 }catch(Exception e) {	
@@ -266,6 +273,30 @@ public class TrafficApplication extends Application{
 		return msg;
 	}
 
+	public double getTrafficInfoRange(HashMap<String, RoadProperties> rps, DTNHost host) {
+		double max = 0;
+		double distance = 0;
+		Road farthest = null;
+		for(String key : rps.keySet()) {
+			Road r = rps.get(key).getRoad();
+			if(r != null)
+				distance = host.getLocation().distance((Coord) r.getEndpoint());
+			
+			if(distance > max) {
+				farthest = r;
+				max = distance;
+			}
+		}
+//		System.out.println(host + " farthest waypoint: " + farthest.getEndpoint() + " of road " + farthest.getRoadName() + " distance: " + max);
+		return max;
+	}
+	
+	public void plotTrafficInfo(HashMap<String, RoadProperties> rps, DTNHost host) {
+		map = host.getMovementModel().getMap();
+		
+//		System.out.println(host + " " + map);
+	}
+	
 	//groups messages according to its senders' current road, messages from different senders that are in same road are
 	//stored in a hash using the road name, which are common to them, as the key
 	public void groupMsgsByRoad(HashMap<DTNHost, Message> msgs, DTNHost host) {
@@ -353,31 +384,39 @@ public class TrafficApplication extends Application{
 		String condition = "";
 		
 		if(!hash.containsKey(host.getCurrentRoad().getRoadName())) {
-			RoadProperties rps = new RoadProperties(host.getCurrentRoad().getRoadName(), host.getCurrentSpeed(), 1, condition);
+			RoadProperties rps = new RoadProperties(host.getCurrentRoad().getRoadName(), host.getCurrentRoad(), host.getCurrentSpeed(), 1, condition);
 			this.roadProperties.put(host.getCurrentRoad().getRoadName(), rps);
 		}
 		
 		for(String key : hash.keySet()) {
 			RoadProperties rps;
 			if(hash.get(key).isEmpty()) {
-				rps = new RoadProperties(key, NaN, 0, condition);
-				this.roadProperties.put(key, rps);
+				if(key.equals(host.getCurrentRoad().getRoadName())) {
+					rps = new RoadProperties(host.getCurrentRoad().getRoadName(), host.getCurrentRoad(), host.getCurrentSpeed(), 1, condition);
+					this.roadProperties.put(host.getCurrentRoad().getRoadName(), rps);
+				}
+//				rps = new RoadProperties(key, null, NaN, 0, condition);
+//				this.roadProperties.put(key, rps);
+				else
+					this.roadProperties.remove(key);
 			}
 			//if hash has a value for the key
 			else {
-
+				Road r = null;
 				Iterator<Message> iterator = hash.get(key).iterator();
 				double average = 0;
 				int ctr = 0;
 				
 				//if an key equal ha road han host
 				if(key.equals(host.getCurrentRoad().getRoadName())) {
+					r = host.getCurrentRoad();
 					for(Message m : getMyFrontNodes(this.groupedMsgs, host)) {
 						average = average + (double) m.getProperty(mSPEED);
 						ctr++;
 					}
 					average = average/ctr;
-					rps = new RoadProperties(key, average, ctr, condition);
+					rps = new RoadProperties(key, r, average, ctr, condition);
+//					rps = this.roadProperties.get(key);
 					this.roadProperties.put(key, rps);
 				}
 				
@@ -386,11 +425,12 @@ public class TrafficApplication extends Application{
 					while(iterator.hasNext()) {
 						Message m = iterator.next();
 						double s = (double) m.getProperty(mSPEED);
+						r = (Road) m.getProperty(mCURRENT_ROAD);
 						average = average + s;
 						ctr++;
 					}
 					average = average/ctr;
-					rps = new RoadProperties(key, average, ctr, condition);
+					rps = new RoadProperties(key, r, average, ctr, condition);
 					this.roadProperties.put(key, rps);
 				}
 			}
@@ -437,9 +477,9 @@ public class TrafficApplication extends Application{
 				else
 					this.currentRoadCondition = MEDIUM_FLOW;
 			}
-			RoadProperties r = hash.get(key);
-			r.setCondition(this.currentRoadCondition);
-			hash.put(key, r);
+			RoadProperties rps = hash.get(key);
+			rps.setCondition(this.currentRoadCondition);
+			hash.put(key, rps);
 		}
 	}
 	
@@ -474,7 +514,7 @@ public class TrafficApplication extends Application{
 	public Road get1RoadAhead(DTNHost h) {
 		Road r = null;
 		if(!h.getRoadsAhead().isEmpty())
-			if(h.getRoadsAhead().size() >=1)
+			if(h.getRoadsAhead().size() >=1 && h.getRoadsAhead().get(0) != null)
 				r = h.getRoadsAhead().get(0);
 		return r;
 	}
@@ -482,7 +522,7 @@ public class TrafficApplication extends Application{
 	public Road get2RoadsAhead(DTNHost h) {
 		Road r = null;
 		if(!h.getRoadsAhead().isEmpty())
-			if(h.getRoadsAhead().size() >=2)
+			if(h.getRoadsAhead().size() >=2 && h.getRoadsAhead().get(1) != null)
 				r = h.getRoadsAhead().get(1);
 		return r;
 	}
@@ -511,6 +551,16 @@ public class TrafficApplication extends Application{
 	public void update(DTNHost host) {
 		
 		updateGroupedMsgs(this.groupedMsgs, host);
+		
+		if(!this.passive && !this.roadProperties.isEmpty() && this.roadProperties.containsKey(host.getCurrentRoad().getRoadName())) {
+//			System.out.println(this.roadProperties.get(host.getCurrentRoad().getRoadName()));
+			super.sendEventToListeners("TrafficReport", host.getCurrentRoad(), 
+					this.roadProperties.get(host.getCurrentRoad().getRoadName()).getCondition(), SimClock.getTime(), 
+				new HashMap<String, RoadProperties>(this.roadProperties), host.getPath(), null, host);
+//			plotTrafficInfo(this.roadProperties, host);
+			getTrafficInfoRange(roadProperties, host);
+		}
+		
 		
 		double curTime = SimClock.getTime();
 //		System.out.println(host + " current trip : " + host.getCurrentTrip().toString() + " TravelTime: " + host.getTravelTime());
@@ -567,6 +617,8 @@ public class TrafficApplication extends Application{
 				p.addWaypoint(n.getLocation());
 			}
 			host.reroute(p);
+			super.sendEventToListeners("RerouteReport", host.getCurrentRoad(), SimClock.getTime(), 
+					this.roadProperties, host.getPath(), null, host);
 		}
 	}
 	
