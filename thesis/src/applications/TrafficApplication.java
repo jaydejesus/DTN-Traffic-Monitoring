@@ -367,6 +367,11 @@ public class TrafficApplication extends Application{
 		return list;
 	}
 	
+	//to fix --puydi kasi na high density na tapos sakto na an maghinay. nag iiba an evaluation once may nauupod
+	//normal node ha pagcompute average speed bisan na kaaabot pala han normal node
+	//bagan once maghighdensity na, check anay kun tanan na aada ha highdensity nabelong ha
+	//slow speed
+	//tapos additional experiments para han penetration rate na experiment
 	public void computeAverageSpeedPerRoad(HashMap<String, List<Message>> hash, DTNHost host) {
 		double NaN = -1.0;
 		String condition = "";

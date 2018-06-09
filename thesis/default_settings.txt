@@ -4,7 +4,7 @@
 
 ## Scenario settings
 #Scenario.name = Experiment1(TrafficApp)_Seed-%%MovementModel.rngSeed%% 
-Scenario.name = ReroutingTest(No TrafficApp)
+Scenario.name = PenetrationRateTest(With TrafficApp)
 Scenario.simulateConnections = true
 Scenario.updateInterval = 1.0
 # 43200s == 12h
@@ -154,7 +154,7 @@ Events.nrof = 1
 ## Reports - all report names have to be valid report classes
 # how many reports to load
 Report.nrofReports = 3
-Report.reportDir = reports/DTN Traffic Monitoring/trial runs/reroute screenshots/no app/
+Report.reportDir = reports/DTN Traffic Monitoring/trial runs/penetration rate/with app/
 # Report classes to load
 #Report.report1 = EventLogReport
 Report.report1 = TrafficAppReporter
